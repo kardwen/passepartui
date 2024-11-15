@@ -18,7 +18,7 @@ The name `passepartui` is a combination of "passepartout", French for "master ke
 ## Features
 
 * Easy navigation with arrow keys and Vim keybinding
-* Search and filtering of passwords
+* Searching and filtering of passwords
 * Support for viewing and copying operations
   for passwords and one-time passwords
 * Mouse support (limited)
@@ -33,10 +33,10 @@ The name `passepartui` is a combination of "passepartout", French for "master ke
 
 ### Installation from crates.io
 
-`passepartui` can be found on crates.io [here](https://crates.io/crates/passepartui).
+`passepartui` can be found on crates.io [here](https://crates.io/crates/passepartui). Note that the version must be specified.
 
 ```sh
-cargo install passepartui
+cargo install --version 0.1.0-alpha passepartui
 ```
 
 Type `passepartui` to run the app (provided that `~/.cargo/bin` has been added to `$PATH`).
@@ -57,7 +57,7 @@ cargo build --release
 cp target/release/passepartui ~/.cargo/bin
 ```
 
-Run `passepartui` in a terminal. Note that you need to have `pass` installed in order to use it.
+Run `passepartui` in a terminal.
 
 ## Contrib
 
