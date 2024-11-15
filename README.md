@@ -67,6 +67,8 @@ A desktop entry lets you start `passepartui` with your application menu. Edit th
 
 ## Development
 
+Contributions are welcome! For architectural changes please start with opening an issue.
+
 Build with [Ratatui](https://github.com/ratatui/ratatui)
 
 TODO:
