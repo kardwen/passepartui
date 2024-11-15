@@ -18,7 +18,7 @@ The name `passepartui` is a combination of "passepartout", French for "master ke
 ## Features
 
 * Easy navigation with arrow keys and Vim keybinding
-* Search and filtering of passwords
+* Searching and filtering of passwords
 * Support for viewing and copying operations
   for passwords and one-time passwords
 * Mouse support (limited)
@@ -57,7 +57,7 @@ cargo build --release
 cp target/release/passepartui ~/.cargo/bin
 ```
 
-Run `passepartui` in a terminal. Note that you need to have `pass` installed in order to use it.
+Run `passepartui` in a terminal.
 
 ## Contrib
 
@@ -66,6 +66,8 @@ The `contrib` directory contains additional files, for now an example for a desk
 A desktop entry lets you start `passepartui` with your application menu. Edit the desktop file `passepartui.desktop` to use your terminal emulator for running `passepartui` and copy it to `$XDG_DATA_HOME/applications` which is usually `~/.local/share/applications`.
 
 ## Development
+
+Contributions are welcome! For architectural changes please start with opening an issue.
 
 Build with [Ratatui](https://github.com/ratatui/ratatui)
 
