@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=passepartui
+GenericName=Password manager
+Comment=A TUI for pass
+Icon=passepartui
+Exec=foot -e passepartui
+Categories=Settings;Utility;ConsoleOnly;
+Terminal=true
+Keywords=pass;pass-otp;
