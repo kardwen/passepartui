@@ -33,7 +33,7 @@ The name `passepartui` is a combination of "passepartout", French for "master ke
 
 ### Installation from crates.io
 
-`passepartui` can be found on crates.io [here](https://crates.io/crates/passepartui). Note that the version must be specified.
+`passepartui` can be found on crates.io [here](https://crates.io/crates/passepartui/0.1.0-alpha). Note that the version must be specified.
 
 ```sh
 cargo install --version 0.1.0-alpha passepartui
