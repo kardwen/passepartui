@@ -32,6 +32,8 @@ pub struct Theme {
     pub table_selected_cell_style_fg: Color,
     pub table_selected_column_style_fg: Color,
     pub table_selected_row_style_fg: Color,
+    pub table_track_bg: Color,
+    pub table_track_fg: Color,
 }
 
 impl Theme {
@@ -68,6 +70,8 @@ impl Theme {
             table_selected_cell_style_fg: tailwind::BLUE.c600,
             table_selected_column_style_fg: tailwind::BLUE.c400,
             table_selected_row_style_fg: tailwind::BLUE.c400,
+            table_track_bg: tailwind::SLATE.c800,
+            table_track_fg: tailwind::SLATE.c400,
         }
     }
 }

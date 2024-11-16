@@ -1,7 +1,7 @@
 use ratatui::{
     buffer::Buffer,
     crossterm::event::{MouseButton, MouseEvent, MouseEventKind},
-    layout::{Constraint, Position, Rect},
+    layout::{Constraint, Layout, Position, Rect},
     style::{Modifier, Style, Stylize},
     text::{Line, Span, Text},
     widgets::{
@@ -27,8 +27,8 @@ pub struct PasswordTable<'a> {
     scrollbar: Scrollbar<'a>,
     scrollbar_state: ScrollbarState,
     area: Option<Rect>,
-    content_area: Option<Rect>,
-    scrollbar_area: Option<Rect>,
+    mouse_content_area: Option<Rect>,
+    mouse_scrollbar_area: Option<Rect>,
 }
 
 impl<'a> PasswordTable<'a> {
@@ -40,7 +40,14 @@ impl<'a> PasswordTable<'a> {
         let scrollbar_state = ScrollbarState::new(length);
         let scrollbar = Scrollbar::default()
             .orientation(ScrollbarOrientation::VerticalRight)
-            .begin_symbol(None)
+            .begin_style(Style::new().bg(theme.table_header_bg))
+            .track_style(
+                Style::new()
+                    .fg(theme.table_track_fg)
+                    .bg(theme.table_track_bg),
+            )
+            .thumb_style(Style::new().fg(theme.standard_fg).bg(theme.standard_bg))
+            .begin_symbol(Some(" "))
             .end_symbol(None);
         Self {
             theme,
@@ -51,8 +58,8 @@ impl<'a> PasswordTable<'a> {
             scrollbar,
             scrollbar_state,
             area: None,
-            content_area: None,
-            scrollbar_area: None,
+            mouse_content_area: None,
+            mouse_scrollbar_area: None,
         }
     }
 
@@ -192,8 +199,8 @@ impl<'a> PasswordTable<'a> {
         self.table_state.selected()
     }
 
-    pub fn scrollbar_area(&self) -> Option<Rect> {
-        self.scrollbar_area
+    pub fn mouse_scrollbar_area(&self) -> Option<Rect> {
+        self.mouse_scrollbar_area
     }
 }
 
@@ -201,27 +208,27 @@ impl<'a> Widget for &mut PasswordTable<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         self.area = Some(area);
 
-        // Exclude header (height: 1) and scrollbar_area plus tolerance from content_area
-        let content_area = Rect {
+        let layout = Layout::horizontal([Constraint::Min(1), Constraint::Length(1)]).split(area);
+
+        // Calculate areas for mouse interaction
+        let mouse_content_area = Rect {
             x: area.x,
             y: area.y + 1,
             width: area.width.saturating_sub(8),
             height: area.height.saturating_sub(1),
         };
-        let scrollbar_area_width = 8;
-        let scrollbar_area = Rect {
-            x: area.width.saturating_sub(scrollbar_area_width),
-            width: scrollbar_area_width,
-            ..content_area
+        let mouse_scrollbar_area = Rect {
+            x: area.width.saturating_sub(8),
+            width: 8,
+            ..mouse_content_area
         };
-        self.content_area = Some(content_area);
-        self.scrollbar_area = Some(scrollbar_area);
+        self.mouse_content_area = Some(mouse_content_area);
+        self.mouse_scrollbar_area = Some(mouse_scrollbar_area);
 
-        StatefulWidget::render(&self.table, area, buf, &mut self.table_state);
-
+        StatefulWidget::render(&self.table, layout[0], buf, &mut self.table_state);
         self.scrollbar
             .clone()
-            .render(scrollbar_area, buf, &mut self.scrollbar_state);
+            .render(layout[1], buf, &mut self.scrollbar_state);
     }
 }
 
@@ -230,7 +237,7 @@ impl<'a> MouseSupport for PasswordTable<'a> {
         let position = Position::new(event.column, event.row);
 
         // Mouse position on password table contents
-        if let Some(area) = self.content_area {
+        if let Some(area) = self.mouse_content_area {
             if area.contains(position) {
                 return match event.kind {
                     MouseEventKind::Down(MouseButton::Left) => {
@@ -246,7 +253,7 @@ impl<'a> MouseSupport for PasswordTable<'a> {
         }
 
         // Mouse position on the scrollbar
-        if let Some(area) = self.scrollbar_area {
+        if let Some(area) = self.mouse_scrollbar_area {
             if area.contains(position) {
                 return match event.kind {
                     MouseEventKind::Down(MouseButton::Left)

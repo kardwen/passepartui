@@ -10,7 +10,7 @@ I started this project as a way to practice programming in Rust while reading th
 Therefore this project is still in an alpha version, however user interaction is mostly finished.
 
 `passepartui` relies for all decryption operations on [pass](https://www.passwordstore.org/), one-time passwords (OTP) are handled by [`pass-otp`](https://github.com/tadfisher/pass-otp).
-Currently no functionality for manipulating the password store, e.g. adding or deleting a password, is implemented. For those operations use  `pass` directly from your terminal (refer to `man pass`).
+Currently no functionality for manipulating the password store, e.g. adding or deleting a password, is implemented. For those operations use `pass` directly from your terminal (refer to `man pass`).
 More on the current state of development can be found below.
 
 The name `passepartui` is a combination of "passepartout", French for "master key", and "TUI".
@@ -43,7 +43,7 @@ Type `passepartui` to run the app (provided that `~/.cargo/bin` has been added t
 
 ### Manual installation
 
-Clone the repository and change to it:
+Clone the repository and change to the directory:
 
 ```sh
 git clone git@github.com:kardwen/passepartui.git
