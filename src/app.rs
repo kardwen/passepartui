@@ -122,8 +122,12 @@ impl<'a> App<'a> {
                     Some(Action::Navigation(NavigationAction::Down))
                 }
                 KeyCode::Char('k') | KeyCode::Up => Some(Action::Navigation(NavigationAction::Up)),
-                KeyCode::PageDown => Some(Action::Navigation(NavigationAction::PageDown)),
-                KeyCode::PageUp => Some(Action::Navigation(NavigationAction::PageUp)),
+                KeyCode::PageDown | KeyCode::Char('f') => {
+                    Some(Action::Navigation(NavigationAction::PageDown))
+                }
+                KeyCode::PageUp | KeyCode::Char('b') => {
+                    Some(Action::Navigation(NavigationAction::PageUp))
+                }
                 KeyCode::Char('g') | KeyCode::Home => {
                     Some(Action::Navigation(NavigationAction::Top))
                 }
@@ -154,8 +158,12 @@ impl<'a> App<'a> {
                 KeyCode::Esc | KeyCode::Enter => Some(Action::Navigation(NavigationAction::Leave)),
                 KeyCode::Down => Some(Action::Navigation(NavigationAction::Down)),
                 KeyCode::Up => Some(Action::Navigation(NavigationAction::Up)),
-                KeyCode::PageDown => Some(Action::Navigation(NavigationAction::PageDown)),
-                KeyCode::PageUp => Some(Action::Navigation(NavigationAction::PageUp)),
+                KeyCode::PageDown | KeyCode::Char('f') => {
+                    Some(Action::Navigation(NavigationAction::PageDown))
+                }
+                KeyCode::PageUp | KeyCode::Char('b') => {
+                    Some(Action::Navigation(NavigationAction::PageUp))
+                }
                 KeyCode::F(1) => Some(Action::Navigation(NavigationAction::Help)),
                 KeyCode::Char(key) => Some(Action::Search(SearchAction::Insert(key))),
                 KeyCode::Backspace => Some(Action::Search(SearchAction::RemoveLeft)),
