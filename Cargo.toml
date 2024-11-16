@@ -25,6 +25,7 @@ opt-level = 0
 debug = 2
 
 [profile.release]
+lto = "thin"
 opt-level = 3
 debug = 1
 strip = false
