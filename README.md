@@ -7,10 +7,10 @@ A TUI for pass
 ## Introduction
 
 I started this project as a way to practice programming in Rust while reading the [Rust Book](https://doc.rust-lang.org/stable/book/title-page.html).
-Therefore this project is still in an early alpha version, however user interaction is mostly finished.
+Therefore this project is still in an alpha version, however user interaction is mostly finished.
 
 `passepartui` relies for all decryption operations on [pass](https://www.passwordstore.org/), one-time passwords (OTP) are handled by [`pass-otp`](https://github.com/tadfisher/pass-otp).
-Functionality for changing the password store is currently not implemented.
+Currently no functionality for manipulating the password store, e.g. adding or deleting a password, is implemented. For those operations use  `pass` directly from your terminal (refer to `man pass`).
 More on the current state of development can be found below.
 
 The name `passepartui` is a combination of "passepartout", French for "master key", and "TUI".
@@ -83,13 +83,15 @@ Planned for future versions:
 
 * Background updates
 * Support for symbolic links in store
-* Tree view for folders <https://github.com/EdJoPaTo/tui-rs-tree-widget>
-* Decryption of password files with rust (possibly with sequoia-openpgp)
-  This allows for
-  * showing all passwords at once when scrolling in the corresponding view mode
-  * displaying flags for set fields in password table
-* Column sorting
-* Theming
+* Tree view for folders (for example [Ratatui Tree Widget](https://github.com/EdJoPaTo/tui-rs-tree-widget))
+* Configuration file for setting options
+* Theming, e.g. for using the terminal color theme
+* Decryption of password files with Rust (possibly with sequoia-openpgp).
+  This would allow for
+  * showing which fields are set in the password preview
+  * showing all passwords at once when scrolling in the corresponding view mode (optional)
+  * displaying flags for set fields in the password table
+* Sorting of the password table by columns
 
 Clippy:
 
