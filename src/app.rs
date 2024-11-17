@@ -44,7 +44,7 @@ impl<'a> App<'a> {
     }
 
     fn handle_events(&mut self) -> Result<()> {
-        if event::poll(self.tick_rate).unwrap() {
+        if event::poll(self.tick_rate)? {
             if let Ok(terminal_event) = event::read() {
                 match terminal_event {
                     TerminalEvent::Key(event) if event.kind == KeyEventKind::Press => {

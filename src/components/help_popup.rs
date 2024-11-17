@@ -62,10 +62,10 @@ impl<'a> Widget for &mut HelpPopup<'a> {
         let text = vec![
             Line::from("Navigation".fg(theme.debug).italic()),
             Line::default(),
-            Line::from("(↓), (↑), (j), (k) Select list entry".fg(theme.standard_fg)),
-            Line::from("(⇣), (⇡), (b), (f) Skip list entries".fg(theme.standard_fg)),
-            Line::from("(⇱), (g) Select first entry in list".fg(theme.standard_fg)),
-            Line::from("(⇲), (G) Select last entry in list".fg(theme.standard_fg)),
+            Line::from("(↓) (↑) (j) (k) Select list entry".fg(theme.standard_fg)),
+            Line::from("(⇣) (⇡) (f) (b) Skip list entries".fg(theme.standard_fg)),
+            Line::from("(⇱) (g) Select first entry in list".fg(theme.standard_fg)),
+            Line::from("(⇲) (G) Select last entry in list".fg(theme.standard_fg)),
             Line::default(),
             Line::from("(←) (h) (→) (l) (↵) Switch between view modes".fg(theme.standard_fg)),
             Line::from("for password list, preview and secrets".fg(theme.standard_fg)),
@@ -78,7 +78,7 @@ impl<'a> Widget for &mut HelpPopup<'a> {
             Line::default(),
             Line::from("Search".fg(theme.debug).italic()),
             Line::default(),
-            Line::from("(Esc), (↵) Suspend search".fg(theme.standard_fg)),
+            Line::from("(Esc) (↵) Suspend search".fg(theme.standard_fg)),
             Line::from(
                 "Pressing (Esc) a second time clears the search and resets the filter."
                     .fg(theme.standard_fg),

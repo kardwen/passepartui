@@ -45,7 +45,7 @@ pub struct PasswordStore<'a> {
     status_bar: StatusBar,
     event_tx: Sender<ChannelEvent>,
     ops_map: HashMap<&'a str, (JoinHandle<()>, String)>,
-    clipboard: Clipboard,
+    clipboard: Option<Clipboard>,
     pub app_state: AppState,
     render_details: bool,
 }
@@ -73,7 +73,7 @@ impl<'a> PasswordStore<'a> {
             status_bar: StatusBar::new(),
             event_tx,
             ops_map: HashMap::new(),
-            clipboard: Clipboard::new().unwrap(),
+            clipboard: Clipboard::new().ok(),
             app_state: AppState::default(),
             render_details: true,
         };
@@ -182,7 +182,7 @@ impl<'a> PasswordStore<'a> {
     }
 
     pub fn get_selected_info(&self) -> Option<&PasswordInfo> {
-        if self.password_subset.len() > 0 {
+        if !self.password_subset.is_empty() {
             return match self.password_table.selected() {
                 Some(index) => self.passwords.get(self.password_subset[index]),
                 None => None,
@@ -194,15 +194,20 @@ impl<'a> PasswordStore<'a> {
     fn copy_pass_id(&mut self) {
         if let Some(info) = self.get_selected_info() {
             let pass_id = info.pass_id();
-            match self.clipboard.set_text(pass_id) {
-                Ok(()) => {
-                    let status_text = "Password file identifier copied to clipboard".into();
-                    self.status_bar.display_message(status_text);
+            if let Some(ref mut clipboard) = self.clipboard {
+                match clipboard.set_text(pass_id) {
+                    Ok(()) => {
+                        let status_text = "Password file identifier copied to clipboard".into();
+                        self.status_bar.display_message(status_text);
+                    }
+                    Err(e) => {
+                        let status_text = format!("Failed to copy password file identifier: {e:?}");
+                        self.status_bar.display_message(status_text);
+                    }
                 }
-                Err(e) => {
-                    let status_text = format!("Failed to copy password file identifier: {e:?}");
-                    self.status_bar.display_message(status_text);
-                }
+            } else {
+                let status_text = String::from("✗ Clipboard not available");
+                self.status_bar.display_message(status_text);
             }
         } else {
             let status_text = String::from("No entry selected");
@@ -229,7 +234,7 @@ impl<'a> PasswordStore<'a> {
                     format!("(pass) {status}")
                 };
                 let status_event = ChannelEvent::Status(message);
-                tx.send(status_event).unwrap();
+                tx.send(status_event).expect("receiver deallocated");
             }
 
             if run_once(
@@ -266,7 +271,7 @@ impl<'a> PasswordStore<'a> {
                     format!("✗ (pass) {status}")
                 };
                 let status_event = ChannelEvent::Status(message);
-                tx.send(status_event).unwrap();
+                tx.send(status_event).expect("receiver deallocated");
             }
 
             if run_once(
@@ -305,7 +310,7 @@ impl<'a> PasswordStore<'a> {
                     format!("✗ (pass) {status}")
                 };
                 let status_event = ChannelEvent::Status(message);
-                tx.send(status_event).unwrap();
+                tx.send(status_event).expect("receiver deallocated");
             }
 
             if run_once(
@@ -341,11 +346,13 @@ impl<'a> PasswordStore<'a> {
                         pass_id,
                         one_time_password,
                     })
-                    .unwrap();
-                    tx.send(ChannelEvent::ResetStatus).unwrap();
+                    .expect("receiver deallocated");
+                    tx.send(ChannelEvent::ResetStatus)
+                        .expect("receiver deallocated");
                 } else {
                     let message = format!("✗ (pass) {}", String::from_utf8_lossy(&output.stderr));
-                    tx.send(ChannelEvent::Status(message)).unwrap();
+                    tx.send(ChannelEvent::Status(message))
+                        .expect("receiver deallocated");
                 }
             }
 
@@ -380,11 +387,13 @@ impl<'a> PasswordStore<'a> {
                         pass_id,
                         file_contents,
                     })
-                    .unwrap();
-                    tx.send(ChannelEvent::ResetStatus).unwrap();
+                    .expect("receiver deallocated");
+                    tx.send(ChannelEvent::ResetStatus)
+                        .expect("receiver deallocated");
                 } else {
                     let message = format!("✗ (pass) {}", String::from_utf8_lossy(&output.stderr));
-                    tx.send(ChannelEvent::Status(message)).unwrap();
+                    tx.send(ChannelEvent::Status(message))
+                        .expect("receiver deallocated");
                 };
             }
 
@@ -444,8 +453,9 @@ impl<'a> PasswordStore<'a> {
             return;
         }
 
-        if pass_id != self.get_selected_info().unwrap().pass_id {
-            return;
+        match self.get_selected_info() {
+            Some(info) if pass_id == info.pass_id => (),
+            _ => return,
         }
 
         self.file_popup.set_content(&pass_id, &message.clone());
@@ -735,10 +745,13 @@ impl<'a> Component for PasswordStore<'a> {
             Action::DisplayOneTimePassword {
                 pass_id,
                 one_time_password,
-            } if pass_id == self.get_selected_info().unwrap().pass_id => {
-                self.password_details.one_time_password = Some(one_time_password);
-                None
-            }
+            } => match self.get_selected_info() {
+                Some(info) if pass_id == info.pass_id => {
+                    self.password_details.one_time_password = Some(one_time_password);
+                    None
+                }
+                _ => None,
+            },
             _ => None,
         };
         Ok(action)

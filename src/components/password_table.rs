@@ -24,7 +24,6 @@ pub struct PasswordTable<'a> {
     length: usize,
     table_state: TableState,
     pub highlight_pattern: Option<String>,
-    scrollbar: Scrollbar<'a>,
     scrollbar_state: ScrollbarState,
     area: Option<Rect>,
     mouse_content_area: Option<Rect>,
@@ -38,24 +37,12 @@ impl<'a> PasswordTable<'a> {
         let length = rows.len();
         let table = Self::build_table(rows, &theme);
         let scrollbar_state = ScrollbarState::new(length);
-        let scrollbar = Scrollbar::default()
-            .orientation(ScrollbarOrientation::VerticalRight)
-            .begin_style(Style::new().bg(theme.table_header_bg))
-            .track_style(
-                Style::new()
-                    .fg(theme.table_track_fg)
-                    .bg(theme.table_track_bg),
-            )
-            .thumb_style(Style::new().fg(theme.standard_fg).bg(theme.standard_bg))
-            .begin_symbol(Some(" "))
-            .end_symbol(None);
         Self {
             theme,
             table,
             length,
             table_state: TableState::new(),
             highlight_pattern: None,
-            scrollbar,
             scrollbar_state,
             area: None,
             mouse_content_area: None,
@@ -131,7 +118,7 @@ impl<'a> PasswordTable<'a> {
                         Cell::from(Line::from(pass_id_parts)),
                         Cell::from(info.last_modified()),
                     ])
-                    .style(Style::default().bg(bg_color))
+                    .style(Style::default().fg(self.theme.table_row_fg).bg(bg_color))
                 })
                 .collect()
         } else {
@@ -207,8 +194,10 @@ impl<'a> PasswordTable<'a> {
 impl<'a> Widget for &mut PasswordTable<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         self.area = Some(area);
+        let theme = self.theme;
 
-        let layout = Layout::horizontal([Constraint::Min(1), Constraint::Length(1)]).split(area);
+        let [table_area, s_area] =
+            Layout::horizontal([Constraint::Min(1), Constraint::Length(1)]).areas(area);
 
         // Calculate areas for mouse interaction
         let mouse_content_area = Rect {
@@ -225,10 +214,20 @@ impl<'a> Widget for &mut PasswordTable<'a> {
         self.mouse_content_area = Some(mouse_content_area);
         self.mouse_scrollbar_area = Some(mouse_scrollbar_area);
 
-        StatefulWidget::render(&self.table, layout[0], buf, &mut self.table_state);
-        self.scrollbar
-            .clone()
-            .render(layout[1], buf, &mut self.scrollbar_state);
+        StatefulWidget::render(&self.table, table_area, buf, &mut self.table_state);
+
+        Scrollbar::default()
+            .orientation(ScrollbarOrientation::VerticalRight)
+            .begin_style(Style::new().bg(theme.table_header_bg))
+            .track_style(
+                Style::new()
+                    .fg(theme.table_track_fg)
+                    .bg(theme.table_track_bg),
+            )
+            .thumb_style(Style::new().fg(theme.standard_fg).bg(theme.standard_bg))
+            .begin_symbol(Some(" "))
+            .end_symbol(None)
+            .render(s_area, buf, &mut self.scrollbar_state);
     }
 }
 

@@ -2,7 +2,7 @@ use ratatui::{
     buffer::Buffer,
     crossterm::event::MouseEvent,
     layout::{Alignment, Constraint, Direction, Flex, Layout, Rect},
-    style::{Modifier, Style, Stylize},
+    style::{Style, Stylize},
     symbols,
     text::Line,
     widgets::{Block, Borders, Paragraph, Widget, Wrap},
@@ -39,9 +39,10 @@ impl PasswordDetails<'_> {
         let theme = Theme::new();
         let pass_id_field = DetailsField::new(Line::from(vec![
             "Password file"
-                .add_modifier(Modifier::ITALIC | Modifier::UNDERLINED)
-                .fg(theme.details_field_fg)
-                .bold(),
+                .underlined()
+                .italic()
+                .bold()
+                .fg(theme.details_field_fg),
             " 🗐".fg(theme.details_field_fg),
         ]))
         .button(
@@ -53,9 +54,10 @@ impl PasswordDetails<'_> {
         );
         let lines_field = DetailsField::new(Line::from(vec![
             "Number of lines"
-                .add_modifier(Modifier::ITALIC | Modifier::UNDERLINED)
-                .fg(theme.details_field_fg)
-                .bold(),
+                .underlined()
+                .italic()
+                .bold()
+                .fg(theme.details_field_fg),
             " 🗟".fg(theme.details_field_fg),
         ]))
         .button(
@@ -67,9 +69,10 @@ impl PasswordDetails<'_> {
         );
         let password_field = DetailsField::new(Line::from(vec![
             "Password"
-                .add_modifier(Modifier::ITALIC | Modifier::UNDERLINED)
-                .fg(theme.details_field_fg)
-                .bold(),
+                .underlined()
+                .italic()
+                .bold()
+                .fg(theme.details_field_fg),
             " 🗝".fg(theme.details_field_fg),
         ]))
         .placeholder("********")
@@ -82,9 +85,10 @@ impl PasswordDetails<'_> {
         );
         let otp_field = DetailsField::new(Line::from(vec![
             "One-time password (OTP)"
-                .add_modifier(Modifier::ITALIC | Modifier::UNDERLINED)
-                .fg(theme.details_field_fg)
-                .bold(),
+                .underlined()
+                .italic()
+                .bold()
+                .fg(theme.details_field_fg),
             " 🕰".fg(theme.details_field_fg),
         ]))
         .placeholder("******")
@@ -104,9 +108,10 @@ impl PasswordDetails<'_> {
         );
         let login_field = DetailsField::new(Line::from(vec![
             "Login"
-                .add_modifier(Modifier::ITALIC | Modifier::UNDERLINED)
-                .fg(theme.details_field_fg)
-                .bold(),
+                .underlined()
+                .italic()
+                .bold()
+                .fg(theme.details_field_fg),
             " 🨂".fg(theme.details_field_fg),
         ]))
         .button(
@@ -241,17 +246,16 @@ impl Widget for &mut PasswordDetails<'_> {
         }
 
         // One-time password field
-        if self.one_time_password.is_some() {
+        if let Some(ref otp) = self.one_time_password {
             let field_area = right_areas.next().expect("counted before");
-            self.otp_field
-                .set_content(self.one_time_password.as_ref().unwrap());
+            self.otp_field.set_content(otp);
             self.otp_field.render(*field_area, buf);
         }
 
         // Login field
-        if self.login.is_some() {
+        if let Some(ref login) = self.login {
             let field_area = right_areas.next().expect("counted before");
-            self.login_field.set_content(self.login.as_ref().unwrap());
+            self.login_field.set_content(login);
             self.login_field.render(*field_area, buf);
         }
     }

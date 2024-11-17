@@ -9,7 +9,7 @@ A TUI for pass
 I started this project as a way to practice programming in Rust while reading the [Rust Book](https://doc.rust-lang.org/stable/book/title-page.html).
 Therefore this project is still in an alpha version, however user interaction is mostly finished.
 
-`passepartui` relies for all decryption operations on [pass](https://www.passwordstore.org/), one-time passwords (OTP) are handled by [`pass-otp`](https://github.com/tadfisher/pass-otp).
+`passepartui` relies for all decryption operations on [pass](https://www.passwordstore.org/), one-time passwords (OTP) are handled by [pass-otp](https://github.com/tadfisher/pass-otp).
 Currently no functionality for manipulating the password store, e.g. adding or deleting a password, is implemented. For those operations use `pass` directly from your terminal (refer to `man pass`).
 More on the current state of development can be found below.
 
@@ -36,7 +36,7 @@ The name `passepartui` is a combination of "passepartout", French for "master ke
 `passepartui` can be found on crates.io [here](https://crates.io/crates/passepartui).
 
 ```sh
-cargo install passepartui
+cargo install passepartui --locked
 ```
 
 Type `passepartui` to run the app (provided that `~/.cargo/bin` has been added to `$PATH`).
