@@ -41,6 +41,14 @@ cargo install passepartui
 
 Type `passepartui` to run the app (provided that `~/.cargo/bin` has been added to `$PATH`).
 
+### Installation from the AUR
+
+`passepartui` is available in the [AUR](https://aur.archlinux.org/packages/passepartui). You can install it with your favorite [AUR helper](https://wiki.archlinux.org/title/AUR_helpers), e.g.:
+
+```sh
+paru -S passepartui
+```
+
 ### Manual installation
 
 Clone the repository and change to the directory:
