@@ -7,33 +7,33 @@ A TUI for pass
 ## Introduction
 
 I started this project as a way to practice programming in Rust while reading the [Rust Book](https://doc.rust-lang.org/stable/book/title-page.html).
-Therefore this project is still in an alpha version, however user interaction is mostly finished.
+Therefore, this project is still in an alpha state, however, user interaction is mostly finished.
 
 `passepartui` relies for all decryption operations on [pass](https://www.passwordstore.org/), one-time passwords (OTP) are handled by [pass-otp](https://github.com/tadfisher/pass-otp).
-Currently no functionality for manipulating the password store, e.g. adding or deleting a password, is implemented. For those operations use `pass` directly from your terminal (refer to `man pass`).
+Currently, no functionality for manipulating the password store (e.g. adding or deleting a password) is implemented. For those operations use `pass` directly from your terminal (refer to `man pass`).
 More on the current state of development can be found below.
 
 The name `passepartui` is a combination of "passepartout", French for "master key", and "TUI".
 
 ## Features
 
-* Easy navigation with arrow keys and Vim keybinding
+* Easy navigation with arrow keys and Vim keybindings
 * Searching and filtering of passwords
-* Support for viewing and copying operations
-  for passwords and one-time passwords
+* Support for viewing and copying of
+  passwords and one-time passwords
 * Mouse support (limited)
 
 ## Installation
 
-### Requirements
+### Prerequisites
 
 * Unix (tested on Linux so far)
 * `pass`, optionally `pass-otp` for one-time passwords
-* Rust and cargo
+* Rust and cargo (when compiling from source)
 
 ### Installation from crates.io
 
-`passepartui` can be found on crates.io [here](https://crates.io/crates/passepartui).
+`passepartui` can be found on [crates.io](https://crates.io/crates/passepartui).
 
 ```sh
 cargo install passepartui --locked
@@ -86,7 +86,7 @@ A desktop entry lets you start `passepartui` with your application menu. Edit th
 
 Contributions are welcome! For architectural changes please start with opening an issue.
 
-Build with [Ratatui](https://github.com/ratatui/ratatui)
+Build with [Ratatui](https://github.com/ratatui/ratatui).
 
 TODO:
 
@@ -109,6 +109,7 @@ Planned for future versions:
   * showing all passwords at once when scrolling in the corresponding view mode (optional)
   * displaying flags for set fields in the password table
 * Sorting of the password table by columns
+* Improvements for running `passepartui` in TTY
 
 Clippy:
 
