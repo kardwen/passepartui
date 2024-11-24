@@ -49,6 +49,15 @@ Type `passepartui` to run the app (provided that `~/.cargo/bin` has been added t
 paru -S passepartui
 ```
 
+### Installation from nixpkgs
+
+`passepartui` is available in [nixpkgs](https://github.com/NixOS/nixpkgs). You
+can install it in your system via the usual ways, or try it with:
+
+```sh
+nix run nixpkgs#passepartui
+```
+
 ### Manual installation
 
 Clone the repository and change to the directory:
