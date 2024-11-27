@@ -1,3 +1,4 @@
+use passepartout::PasswordInfo;
 use ratatui::{
     buffer::Buffer,
     crossterm::event::{MouseButton, MouseEvent, MouseEventKind},
@@ -12,7 +13,6 @@ use ratatui::{
 
 use crate::{
     actions::{Action, NavigationAction},
-    components::password_store::PasswordInfo,
     components::MouseSupport,
     theme::Theme,
 };

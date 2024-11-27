@@ -88,6 +88,8 @@ Contributions are welcome! For architectural changes please start with opening a
 
 Build with [Ratatui](https://github.com/ratatui/ratatui).
 
+Library: [passepartout](https://github.com/kardwen/partout)
+
 TODO:
 
 * General refactoring

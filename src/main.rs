@@ -1,18 +1,15 @@
+mod actions;
+mod app;
+pub mod app_state;
+mod components;
+mod theme;
+
 use anyhow::Result;
 use ratatui::crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
     execute,
 };
-
 use std::io::stdout;
-
-mod actions;
-mod app;
-pub mod app_state;
-mod components;
-mod events;
-mod theme;
-mod utils;
 
 use app::App;
 
