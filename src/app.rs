@@ -11,22 +11,22 @@ use std::{
 use crate::{
     actions::{Action, NavigationAction, PasswordAction, SearchAction},
     app_state::{AppState, MainState, OverlayState, SearchState},
-    components::{Component, MouseSupport, PasswordStore},
-    events::ChannelEvent,
+    components::{Component, Dashboard, MouseSupport},
 };
+use passepartout::ChannelEvent;
 
 pub struct App<'a> {
     running: bool,
     tick_rate: Duration,
     event_rx: Receiver<ChannelEvent>,
-    store: PasswordStore<'a>,
+    dashboard: Dashboard<'a>,
 }
 
 impl<'a> App<'a> {
     pub fn new() -> Self {
         let (event_tx, event_rx) = mpsc::channel();
         Self {
-            store: PasswordStore::new(event_tx),
+            dashboard: Dashboard::new(event_tx),
             running: false,
             tick_rate: Duration::from_millis(80),
             event_rx,
@@ -37,7 +37,7 @@ impl<'a> App<'a> {
         self.running = true;
         // Application loop
         while self.running {
-            terminal.draw(|frame| frame.render_widget(&mut self.store, frame.area()))?;
+            terminal.draw(|frame| frame.render_widget(&mut self.dashboard, frame.area()))?;
             self.handle_events()?;
         }
         Ok(())
@@ -71,7 +71,7 @@ impl<'a> App<'a> {
     }
 
     fn handle_key_event(&mut self, key_event: KeyEvent) -> Option<Action> {
-        match self.store.app_state {
+        match self.dashboard.app_state {
             AppState {
                 main: MainState::Preview | MainState::Secrets,
                 search: SearchState::Inactive | SearchState::Suspended,
@@ -193,7 +193,7 @@ impl<'a> App<'a> {
     }
 
     fn handle_mouse_event(&mut self, event: MouseEvent) -> Option<Action> {
-        self.store.handle_mouse_event(event)
+        self.dashboard.handle_mouse_event(event)
     }
 
     fn handle_channel_event(&mut self, event: ChannelEvent) -> Option<Action> {
@@ -218,9 +218,9 @@ impl<'a> App<'a> {
     }
 
     fn dispatch_action(&mut self, action: Action) -> Result<()> {
-        let mut next_action = self.store.update(action.clone())?;
+        let mut next_action = self.dashboard.update(action.clone())?;
         while let Some(action) = next_action {
-            next_action = self.store.update(action)?;
+            next_action = self.dashboard.update(action)?;
         }
 
         let _ = self.update(action)?;

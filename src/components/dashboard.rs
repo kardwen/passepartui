@@ -1,21 +1,11 @@
 use anyhow::Result;
-use arboard::Clipboard;
 use ratatui::{
     buffer::Buffer,
     crossterm::event::MouseEvent,
     layout::{Constraint, Direction, Layout, Margin, Rect},
     widgets::Widget,
 };
-use std::{
-    collections::HashMap,
-    env,
-    ffi::OsStr,
-    fs,
-    path::{Path, PathBuf},
-    process::{Command, Stdio},
-    sync::mpsc::Sender,
-    thread::JoinHandle,
-};
+use std::sync::mpsc::Sender;
 
 use crate::{
     actions::{Action, NavigationAction, PasswordAction, SearchAction},
@@ -24,17 +14,13 @@ use crate::{
         Component, FilePopup, HelpPopup, Menu, MouseSupport, PasswordDetails, PasswordTable,
         SearchField, StatusBar,
     },
-    events::ChannelEvent,
-    utils::run_once,
 };
 
-mod password_info;
+use passepartout::{ChannelEvent, PasswordInfo, PasswordStore};
 
-pub use password_info::PasswordInfo;
-
-pub struct PasswordStore<'a> {
+pub struct Dashboard<'a> {
+    store: PasswordStore,
     area: Option<Rect>,
-    passwords: Vec<PasswordInfo>,
     password_subset: Vec<usize>,
     menu: Menu<'a>,
     password_table: PasswordTable<'a>,
@@ -43,91 +29,34 @@ pub struct PasswordStore<'a> {
     help_popup: HelpPopup<'a>,
     file_popup: FilePopup<'a>,
     status_bar: StatusBar,
-    event_tx: Sender<ChannelEvent>,
-    ops_map: HashMap<&'a str, (JoinHandle<()>, String)>,
-    clipboard: Option<Clipboard>,
     pub app_state: AppState,
     render_details: bool,
 }
 
-impl<'a> PasswordStore<'a> {
+impl<'a> Dashboard<'a> {
     pub fn new(event_tx: Sender<ChannelEvent>) -> Self {
-        let dir = Self::get_store_dir();
-        let mut passwords = Self::get_password_infos(&dir);
-        passwords.sort_by_key(|element| element.pass_id.clone());
-        let password_refs: Vec<&PasswordInfo> = passwords.iter().collect();
-        let password_subset = (0..passwords.len()).collect();
+        let store = PasswordStore::new(event_tx);
+        let password_refs: Vec<&PasswordInfo> = store.passwords.iter().collect();
+        let password_subset = (0..store.passwords.len()).collect();
         let search_field = SearchField::new();
         let help_popup = HelpPopup::new();
         let file_popup = FilePopup::new();
         let mut store = Self {
             area: None,
             password_table: PasswordTable::new(&password_refs),
+            store,
             password_details: PasswordDetails::new(),
-            passwords,
             password_subset,
             menu: Menu::new(),
             search_field,
             help_popup,
             file_popup,
             status_bar: StatusBar::new(),
-            event_tx,
-            ops_map: HashMap::new(),
-            clipboard: Clipboard::new().ok(),
             app_state: AppState::default(),
             render_details: true,
         };
         store.select_entry(0);
         store
-    }
-
-    pub fn get_store_dir() -> PathBuf {
-        let home = dirs::home_dir().expect("could not determine home directory");
-        if let Some(store_path) = env::var_os("PASSWORD_STORE_DIR") {
-            let path = PathBuf::from(store_path);
-            if path.is_absolute() {
-                return path;
-            } else if let Ok(relative_to_home) = path
-                .strip_prefix("$HOME")
-                .or_else(|_| path.strip_prefix("~"))
-            {
-                return home.join(relative_to_home);
-            };
-        }
-        home.join(".password-store")
-    }
-
-    fn get_password_infos(store_dir: &Path) -> Vec<PasswordInfo> {
-        Self::read_store_dir(store_dir)
-            .unwrap_or_default()
-            .iter()
-            .filter_map(|path| {
-                let relative_path = path.strip_prefix(store_dir).expect("prefix does exist");
-                match path.metadata() {
-                    Ok(metadata) => Some(PasswordInfo::new(relative_path, metadata)),
-                    Err(_) => None,
-                }
-            })
-            .collect()
-    }
-
-    fn read_store_dir(dir: &Path) -> Result<Vec<PathBuf>> {
-        let mut result = Vec::new();
-
-        fn visit_dir(dir: &Path, result: &mut Vec<PathBuf>) -> Result<()> {
-            for entry in fs::read_dir(dir)? {
-                let path = entry?.path();
-                if path.is_dir() {
-                    visit_dir(&path, result)?;
-                } else if path.is_file() && path.extension().is_some_and(|ext| ext == "gpg") {
-                    result.push(path);
-                }
-            }
-            Ok(())
-        }
-
-        visit_dir(dir, &mut result)?;
-        Ok(result)
     }
 
     pub fn next(&mut self, step: usize) {
@@ -184,229 +113,11 @@ impl<'a> PasswordStore<'a> {
     pub fn get_selected_info(&self) -> Option<&PasswordInfo> {
         if !self.password_subset.is_empty() {
             return match self.password_table.selected() {
-                Some(index) => self.passwords.get(self.password_subset[index]),
+                Some(index) => self.store.passwords.get(self.password_subset[index]),
                 None => None,
             };
         }
         None
-    }
-
-    fn copy_pass_id(&mut self) {
-        if let Some(info) = self.get_selected_info() {
-            let pass_id = info.pass_id();
-            if let Some(ref mut clipboard) = self.clipboard {
-                match clipboard.set_text(pass_id) {
-                    Ok(()) => {
-                        let status_text = "Password file identifier copied to clipboard".into();
-                        self.status_bar.display_message(status_text);
-                    }
-                    Err(e) => {
-                        let status_text = format!("Failed to copy password file identifier: {e:?}");
-                        self.status_bar.display_message(status_text);
-                    }
-                }
-            } else {
-                let status_text = String::from("✗ Clipboard not available");
-                self.status_bar.display_message(status_text);
-            }
-        } else {
-            let status_text = String::from("No entry selected");
-            self.status_bar.display_message(status_text);
-        }
-    }
-
-    fn copy_password(&mut self) {
-        if let Some(info) = self.get_selected_info() {
-            let tx = self.event_tx.clone();
-            let pass_id = info.pass_id();
-
-            fn pass_fn(pass_id: String, tx: Sender<ChannelEvent>) {
-                let status = Command::new("pass")
-                    .arg(OsStr::new(&pass_id))
-                    .arg("--clip")
-                    .stderr(Stdio::null())
-                    .stdout(Stdio::null())
-                    .status()
-                    .expect("failed to execute process");
-                let message = if status.success() {
-                    "Password copied to clipboard, clears after 45 seconds".to_string()
-                } else {
-                    format!("(pass) {status}")
-                };
-                let status_event = ChannelEvent::Status(message);
-                tx.send(status_event).expect("receiver deallocated");
-            }
-
-            if run_once(
-                &mut self.ops_map,
-                "pass_copy_password",
-                pass_id.clone(),
-                move || pass_fn(pass_id, tx),
-            ) {
-                let status_text = String::from("⧗ (pass) Copying password...");
-                self.status_bar.display_message(status_text);
-            }
-        } else {
-            let status_text = "No entry selected".to_string();
-            self.status_bar.display_message(status_text);
-        }
-    }
-
-    fn copy_login(&mut self) {
-        if let Some(info) = self.get_selected_info() {
-            let tx = self.event_tx.clone();
-            let pass_id = info.pass_id();
-
-            fn pass_fn(pass_id: String, tx: Sender<ChannelEvent>) {
-                let status = Command::new("pass")
-                    .arg(OsStr::new(&pass_id))
-                    .arg("--clip=2")
-                    .stderr(Stdio::null())
-                    .stdout(Stdio::null())
-                    .status()
-                    .expect("failed to execute process");
-                let message = if status.success() {
-                    "Login copied to clipboard, clears after 45 seconds".to_string()
-                } else {
-                    format!("✗ (pass) {status}")
-                };
-                let status_event = ChannelEvent::Status(message);
-                tx.send(status_event).expect("receiver deallocated");
-            }
-
-            if run_once(
-                &mut self.ops_map,
-                "pass_copy_login",
-                pass_id.clone(),
-                move || pass_fn(pass_id, tx),
-            ) {
-                let status_text = String::from("⧗ (pass) Copying login...");
-                self.status_bar.display_message(status_text);
-            }
-        } else {
-            let status_text = "No entry selected".to_string();
-            self.status_bar.display_message(status_text);
-        }
-    }
-
-    fn copy_one_time_password(&mut self) {
-        if let Some(info) = self.get_selected_info() {
-            let tx = self.event_tx.clone();
-            let pass_id = info.pass_id();
-
-            fn pass_fn(pass_id: String, tx: Sender<ChannelEvent>) {
-                let status = Command::new("pass")
-                    .arg("otp")
-                    .arg("code")
-                    .arg(OsStr::new(&pass_id))
-                    .arg("--clip")
-                    .stderr(Stdio::null())
-                    .stdout(Stdio::null())
-                    .status()
-                    .expect("failed to execute process");
-                let message = if status.success() {
-                    "One-time password copied to clipboard".to_string()
-                } else {
-                    format!("✗ (pass) {status}")
-                };
-                let status_event = ChannelEvent::Status(message);
-                tx.send(status_event).expect("receiver deallocated");
-            }
-
-            if run_once(
-                &mut self.ops_map,
-                "pass_otp_copy",
-                pass_id.clone(),
-                move || pass_fn(pass_id, tx),
-            ) {
-                let status_text = String::from("⧗ (pass) Copying one-time password...");
-                self.status_bar.display_message(status_text);
-            }
-        } else {
-            let status_text = "No entry selected".to_string();
-            self.status_bar.display_message(status_text);
-        }
-    }
-
-    fn fetch_one_time_password(&mut self) {
-        if let Some(info) = self.get_selected_info() {
-            let tx = self.event_tx.clone();
-            let pass_id = info.pass_id();
-
-            fn pass_fn(pass_id: String, tx: Sender<ChannelEvent>) {
-                let output = Command::new("pass")
-                    .arg("otp")
-                    .arg("code")
-                    .arg(OsStr::new(&pass_id))
-                    .output()
-                    .expect("failed to execute process");
-                if output.status.success() {
-                    let one_time_password = String::from_utf8_lossy(&output.stdout).to_string();
-                    tx.send(ChannelEvent::OneTimePassword {
-                        pass_id,
-                        one_time_password,
-                    })
-                    .expect("receiver deallocated");
-                    tx.send(ChannelEvent::ResetStatus)
-                        .expect("receiver deallocated");
-                } else {
-                    let message = format!("✗ (pass) {}", String::from_utf8_lossy(&output.stderr));
-                    tx.send(ChannelEvent::Status(message))
-                        .expect("receiver deallocated");
-                }
-            }
-
-            if run_once(
-                &mut self.ops_map,
-                "pass_otp_fetch",
-                pass_id.clone(),
-                move || pass_fn(pass_id, tx),
-            ) {
-                let status_text = String::from("⧗ (pass) Fetching one-time password...");
-                self.status_bar.display_message(status_text);
-            }
-        } else {
-            let status_text = "No entry selected".to_string();
-            self.status_bar.display_message(status_text);
-        }
-    }
-
-    fn fetch_pass_details(&mut self) {
-        if let Some(info) = self.get_selected_info() {
-            let tx = self.event_tx.clone();
-            let pass_id = info.pass_id();
-
-            fn pass_fn(pass_id: String, tx: Sender<ChannelEvent>) {
-                let output = Command::new("pass")
-                    .arg(OsStr::new(&pass_id))
-                    .output()
-                    .expect("failed to execute process");
-                if output.status.success() {
-                    let file_contents = String::from_utf8_lossy(&output.stdout).to_string();
-                    tx.send(ChannelEvent::PasswordInfo {
-                        pass_id,
-                        file_contents,
-                    })
-                    .expect("receiver deallocated");
-                    tx.send(ChannelEvent::ResetStatus)
-                        .expect("receiver deallocated");
-                } else {
-                    let message = format!("✗ (pass) {}", String::from_utf8_lossy(&output.stderr));
-                    tx.send(ChannelEvent::Status(message))
-                        .expect("receiver deallocated");
-                };
-            }
-
-            if run_once(&mut self.ops_map, "pass_show", pass_id.clone(), move || {
-                pass_fn(pass_id, tx)
-            }) {
-                let status_text = String::from("⧗ (pass) Fetching password info...");
-                self.status_bar.display_message(status_text);
-            }
-        } else {
-            let status_text = "No entry selected".to_string();
-            self.status_bar.display_message(status_text);
-        }
     }
 
     fn filter_passwords(&mut self) {
@@ -414,6 +125,7 @@ impl<'a> PasswordStore<'a> {
 
         // Vector of indices for matching passwords
         self.password_subset = self
+            .store
             .passwords
             .iter()
             .enumerate()
@@ -425,7 +137,7 @@ impl<'a> PasswordStore<'a> {
         let filtered_passwords: Vec<&PasswordInfo> = self
             .password_subset
             .iter()
-            .filter_map(|&idx| self.passwords.get(idx))
+            .filter_map(|&idx| self.store.passwords.get(idx))
             .collect();
 
         self.password_table.highlight_pattern = Some(pattern);
@@ -441,8 +153,8 @@ impl<'a> PasswordStore<'a> {
         } else {
             0
         };
-        let password_refs: Vec<&PasswordInfo> = self.passwords.iter().collect();
-        self.password_subset = (0..self.passwords.len()).collect();
+        let password_refs: Vec<&PasswordInfo> = self.store.passwords.iter().collect();
+        self.password_subset = (0..self.store.passwords.len()).collect();
         self.password_table.highlight_pattern = None;
         self.password_table.update_passwords(&password_refs);
         self.select_entry(index);
@@ -471,14 +183,18 @@ impl<'a> PasswordStore<'a> {
         }
 
         let mut next_line = lines.next();
+        let mut has_otp = false;
         while let Some(line) = next_line {
             // One-time password (OTP)
             if line.starts_with("otpauth://") {
-                self.password_details.one_time_password = Some("*".repeat(6));
-                self.fetch_one_time_password();
+                has_otp = true;
             }
             count += 1;
             next_line = lines.next();
+        }
+        if has_otp {
+            self.password_details.one_time_password = Some("*".repeat(6));
+            self.store.fetch_one_time_password(pass_id);
         }
 
         // let remainder = lines.fold(String::default(), |a, b| a + b);
@@ -497,32 +213,44 @@ impl<'a> PasswordStore<'a> {
     }
 }
 
-impl<'a> Component for PasswordStore<'a> {
+impl<'a> Component for Dashboard<'a> {
     fn update(&mut self, action: Action) -> Result<Option<Action>> {
         let action = match action {
             Action::Password(action) => match action {
                 PasswordAction::Fetch => {
-                    self.fetch_pass_details();
+                    if let Some(info) = self.get_selected_info() {
+                        self.store.fetch_pass_details(info.pass_id.clone());
+                    }
                     None
                 }
                 PasswordAction::CopyPassword => {
-                    self.copy_password();
+                    if let Some(info) = self.get_selected_info() {
+                        self.store.copy_password(info.pass_id.clone());
+                    }
                     None
                 }
                 PasswordAction::CopyOneTimePassword => {
-                    self.copy_one_time_password();
+                    if let Some(info) = self.get_selected_info() {
+                        self.store.copy_one_time_password(info.pass_id.clone());
+                    }
                     None
                 }
                 PasswordAction::FetchOneTimePassword => {
-                    self.fetch_one_time_password();
+                    if let Some(info) = self.get_selected_info() {
+                        self.store.fetch_one_time_password(info.pass_id.clone());
+                    }
                     None
                 }
                 PasswordAction::CopyPassId => {
-                    self.copy_pass_id();
+                    if let Some(info) = self.get_selected_info() {
+                        self.store.copy_pass_id(info.pass_id.clone());
+                    }
                     None
                 }
                 PasswordAction::CopyLogin => {
-                    self.copy_login();
+                    if let Some(info) = self.get_selected_info() {
+                        self.store.copy_login(info.pass_id.clone());
+                    }
                     None
                 }
             },
@@ -758,7 +486,7 @@ impl<'a> Component for PasswordStore<'a> {
     }
 }
 
-impl<'a> Widget for &mut PasswordStore<'a> {
+impl<'a> Widget for &mut Dashboard<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         self.area = Some(area);
 
@@ -830,7 +558,7 @@ impl<'a> Widget for &mut PasswordStore<'a> {
     }
 }
 
-impl<'a> MouseSupport for PasswordStore<'a> {
+impl<'a> MouseSupport for Dashboard<'a> {
     fn handle_mouse_event(&mut self, event: MouseEvent) -> Option<Action> {
         // TODO: Currently this only returns the latest action
         // if components overlap, place them last

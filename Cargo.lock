@@ -1378,14 +1378,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "passepartout"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ab11de2ad0125e3fdf3476eb46c3bbad54106d63110f34f98b51161f4114156"
+dependencies = [
+ "arboard",
+ "dirs 5.0.1",
+ "icu",
+]
+
+[[package]]
 name = "passepartui"
 version = "0.1.4"
 dependencies = [
  "anyhow",
- "arboard",
  "clippy",
- "dirs 5.0.1",
  "icu",
+ "passepartout",
  "ratatui",
 ]
 
