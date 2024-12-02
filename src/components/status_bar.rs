@@ -21,11 +21,11 @@ impl StatusBar {
         }
     }
 
-    pub fn display_message(&mut self, message: String) {
+    pub fn set_status(&mut self, message: String) {
         self.text = message;
     }
 
-    pub fn reset_message(&mut self) {
+    pub fn reset_status(&mut self) {
         self.text = "Ready".into();
     }
 }

@@ -14,10 +14,7 @@ categories = ["authentication", "command-line-utilities"]
 anyhow = "1.0.93"
 icu = "1.5.0"
 ratatui = { version = "0.29.0", features = ["palette"] }
-passepartout = "0.1.0"
-
-[dev-dependencies]
-clippy = "0.0.302"
+passepartout = "0.1.2"
 
 [profile.dev]
 opt-level = 0

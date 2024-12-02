@@ -16,7 +16,7 @@ use crate::{
     },
 };
 
-use passepartout::{ChannelEvent, PasswordInfo, PasswordStore};
+use passepartout::{PasswordError, PasswordEvent, PasswordInfo, PasswordStore};
 
 pub struct Dashboard<'a> {
     store: PasswordStore,
@@ -34,7 +34,7 @@ pub struct Dashboard<'a> {
 }
 
 impl<'a> Dashboard<'a> {
-    pub fn new(event_tx: Sender<ChannelEvent>) -> Self {
+    pub fn new(event_tx: Sender<PasswordEvent>) -> Self {
         let store = PasswordStore::new(event_tx);
         let password_refs: Vec<&PasswordInfo> = store.passwords.iter().collect();
         let password_subset = (0..store.passwords.len()).collect();
@@ -97,13 +97,13 @@ impl<'a> Dashboard<'a> {
                         return;
                     }
                 }
-                self.status_bar.reset_message();
+                self.status_bar.reset_status();
                 self.file_popup.reset_content();
                 self.password_details.reset();
                 self.password_details.pass_id = Some(pass_id);
             }
             None => {
-                self.status_bar.reset_message();
+                self.status_bar.reset_status();
                 self.file_popup.reset_content();
                 self.password_details.reset();
             }
@@ -190,7 +190,7 @@ impl<'a> Dashboard<'a> {
         }
         if has_otp {
             self.password_details.one_time_password = Some("*".repeat(6));
-            self.store.fetch_one_time_password(pass_id);
+            self.store.fetch_otp(pass_id);
         }
 
         // let remainder = lines.fold(String::default(), |a, b| a + b);
@@ -214,36 +214,71 @@ impl<'a> Component for Dashboard<'a> {
         let action = match action {
             Action::Password(action) => match action {
                 PasswordAction::Fetch => {
+                    if self.get_selected_info().is_some() {
+                        self.status_bar
+                            .set_status("⧗ (pass) Fetching password entry...".to_string());
+                    }
                     if let Some(info) = self.get_selected_info() {
-                        self.store.fetch_pass_details(info.pass_id.clone());
+                        self.store.fetch_entry(info.pass_id.clone());
                     }
                     None
                 }
                 PasswordAction::CopyPassword => {
+                    if self.get_selected_info().is_some() {
+                        self.status_bar
+                            .set_status("⧗ (pass) Copying password...".to_string());
+                    }
                     if let Some(info) = self.get_selected_info() {
                         self.store.copy_password(info.pass_id.clone());
                     }
                     None
                 }
                 PasswordAction::CopyOneTimePassword => {
+                    if self.get_selected_info().is_some() {
+                        self.status_bar
+                            .set_status("⧗ (pass) Copying one-time password...".to_string());
+                    }
                     if let Some(info) = self.get_selected_info() {
-                        self.store.copy_one_time_password(info.pass_id.clone());
+                        self.store.copy_otp(info.pass_id.clone());
                     }
                     None
                 }
                 PasswordAction::FetchOneTimePassword => {
+                    if self.get_selected_info().is_some() {
+                        self.status_bar
+                            .set_status("⧗ (pass) Fetching one-time password...".to_string());
+                    }
                     if let Some(info) = self.get_selected_info() {
-                        self.store.fetch_one_time_password(info.pass_id.clone());
+                        self.store.fetch_otp(info.pass_id.clone());
                     }
                     None
                 }
                 PasswordAction::CopyPassId => {
                     if let Some(info) = self.get_selected_info() {
-                        self.store.copy_pass_id(info.pass_id.clone());
+                        match passepartout::copy_id(info.pass_id.clone()) {
+                            Ok(()) => {
+                                let message = "Password file ID copied to clipboard".to_string();
+                                Some(Action::SetStatus(message))
+                            }
+                            Err(PasswordError::ClipboardError(e)) => {
+                                let message = format!("✗ Failed to copy password file ID: {e:?}");
+                                Some(Action::SetStatus(message))
+                            }
+                            Err(PasswordError::ClipboardUnavailable) => {
+                                let message = String::from("✗ Clipboard not available");
+                                Some(Action::SetStatus(message))
+                            }
+                            Err(_) => None,
+                        }
+                    } else {
+                        None
                     }
-                    None
                 }
                 PasswordAction::CopyLogin => {
+                    if self.get_selected_info().is_some() {
+                        self.status_bar
+                            .set_status("⧗ (pass) Copying login...".to_string());
+                    }
                     if let Some(info) = self.get_selected_info() {
                         self.store.copy_login(info.pass_id.clone());
                     }
@@ -450,12 +485,12 @@ impl<'a> Component for Dashboard<'a> {
                     None
                 }
             },
-            Action::DisplayStatus(message) => {
-                self.status_bar.display_message(message);
+            Action::SetStatus(message) => {
+                self.status_bar.set_status(message);
                 None
             }
             Action::ResetStatus => {
-                self.status_bar.reset_message();
+                self.status_bar.reset_status();
                 None
             }
             Action::DisplaySecrets {
@@ -595,49 +630,4 @@ impl<'a> MouseSupport for Dashboard<'a> {
     fn get_area(&self) -> Option<Rect> {
         self.area
     }
-}
-
-#[cfg(test)]
-mod tests {
-    // use super::*;
-    // use ratatui::style::{Style, Stylize};
-    //
-    // #[test]
-    // fn render() {
-    //     // TODO: Update
-    //     let app = App::default();
-    //     let mut buf = Buffer::empty(Rect::new(0, 0, 50, 4));
-    //
-    //     app.render(buf.area, &mut buf);
-    //
-    //     let mut expected = Buffer::with_lines(vec![
-    //         "┏━━━━━━━━━━━━━ Counter App Tutorial ━━━━━━━━━━━━━┓",
-    //         "┃                    Value: 0                    ┃",
-    //         "┃                                                ┃",
-    //         "┗━ Decrement <Left> Increment <Right> Quit <Q> ━━┛",
-    //     ]);
-    //     let title_style = Style::new().bold();
-    //     let counter_style = Style::new().yellow();
-    //     let key_style = Style::new().blue().bold();
-    //     expected.set_style(Rect::new(14, 0, 22, 1), title_style);
-    //     expected.set_style(Rect::new(28, 1, 1, 1), counter_style);
-    //     expected.set_style(Rect::new(13, 3, 6, 1), key_style);
-    //     expected.set_style(Rect::new(30, 3, 7, 1), key_style);
-    //     expected.set_style(Rect::new(43, 3, 4, 1), key_style);
-    //
-    //     assert_eq!(buf, expected);
-    // }
-    //
-    // #[test]
-    // fn map_key_event() -> Result<()> {
-    //     let mut app = App::default();
-    //     let action = app
-    //         .map_key_event(KeyCode::Char('q').into())
-    //         .expect("key not mapped to action");
-    //     app.update(action);
-    //
-    //     assert!(app.exit);
-    //
-    //     Ok(())
-    // }
 }
