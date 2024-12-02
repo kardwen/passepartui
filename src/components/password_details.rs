@@ -21,7 +21,7 @@ use details_field::DetailsField;
 pub struct PasswordDetails<'a> {
     pub show_secrets: bool,
     pub pass_id: Option<String>,
-    pub number_of_lines: Option<usize>,
+    pub line_count: Option<usize>,
     pub password: Option<String>,
     pub one_time_password: Option<String>,
     pub login: Option<String>,
@@ -124,7 +124,7 @@ impl PasswordDetails<'_> {
         Self {
             show_secrets: false,
             pass_id: None,
-            number_of_lines: None,
+            line_count: None,
             password: None,
             one_time_password: None,
             login: None,
@@ -141,7 +141,7 @@ impl PasswordDetails<'_> {
     // Does not reset pass id
     pub fn clear_secrets(&mut self) {
         self.show_secrets = false;
-        self.number_of_lines = None;
+        self.line_count = None;
         self.password = None;
         self.one_time_password = None;
         self.login = None;
@@ -150,7 +150,7 @@ impl PasswordDetails<'_> {
     pub fn reset(&mut self) {
         self.show_secrets = false;
         self.pass_id = None;
-        self.number_of_lines = None;
+        self.line_count = None;
         self.password = None;
         self.one_time_password = None;
         self.login = None;
@@ -201,10 +201,12 @@ impl Widget for &mut PasswordDetails<'_> {
         }
 
         // Number of lines field
-        if let Some(number) = &self.number_of_lines {
-            let field_area = left_layout[1];
-            self.lines_field.set_content(&number.to_string());
-            self.lines_field.render(field_area, buf);
+        if let Some(number) = &self.line_count {
+            if self.show_secrets {
+                let field_area = left_layout[1];
+                self.lines_field.set_content(&number.to_string());
+                self.lines_field.render(field_area, buf);
+            }
         }
 
         // Hint
@@ -237,7 +239,9 @@ impl Widget for &mut PasswordDetails<'_> {
         // Password field
         if self.pass_id.is_some() {
             let field_area = right_areas.next().expect("counted before");
-            if let Some(password) = &self.password {
+            if !self.show_secrets {
+                self.password_field.reset_content()
+            } else if let Some(password) = &self.password {
                 self.password_field.set_content(password);
             } else {
                 self.password_field.reset_content()
@@ -247,16 +251,20 @@ impl Widget for &mut PasswordDetails<'_> {
 
         // One-time password field
         if let Some(ref otp) = self.one_time_password {
-            let field_area = right_areas.next().expect("counted before");
-            self.otp_field.set_content(otp);
-            self.otp_field.render(*field_area, buf);
+            if self.show_secrets {
+                let field_area = right_areas.next().expect("counted before");
+                self.otp_field.set_content(otp);
+                self.otp_field.render(*field_area, buf);
+            }
         }
 
         // Login field
         if let Some(ref login) = self.login {
-            let field_area = right_areas.next().expect("counted before");
-            self.login_field.set_content(login);
-            self.login_field.render(*field_area, buf);
+            if self.show_secrets {
+                let field_area = right_areas.next().expect("counted before");
+                self.login_field.set_content(login);
+                self.login_field.render(*field_area, buf);
+            }
         }
     }
 }

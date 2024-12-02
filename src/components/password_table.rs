@@ -27,7 +27,7 @@ pub struct PasswordTable<'a> {
     scrollbar_state: ScrollbarState,
     area: Option<Rect>,
     mouse_content_area: Option<Rect>,
-    mouse_scrollbar_area: Option<Rect>,
+    mouse_track_area: Option<Rect>,
 }
 
 impl<'a> PasswordTable<'a> {
@@ -46,7 +46,7 @@ impl<'a> PasswordTable<'a> {
             scrollbar_state,
             area: None,
             mouse_content_area: None,
-            mouse_scrollbar_area: None,
+            mouse_track_area: None,
         }
     }
 
@@ -157,7 +157,7 @@ impl<'a> PasswordTable<'a> {
         let selected_cell_style = Style::default()
             .add_modifier(Modifier::REVERSED)
             .fg(theme.table_selected_cell_style_fg);
-        let header = ["Password", "Last modified (UTC)"]
+        let header = ["Password file", "Last modified (UTC)"]
             .into_iter()
             .map(Cell::from)
             .collect::<Row>()
@@ -185,10 +185,6 @@ impl<'a> PasswordTable<'a> {
     pub fn selected(&self) -> Option<usize> {
         self.table_state.selected()
     }
-
-    pub fn mouse_scrollbar_area(&self) -> Option<Rect> {
-        self.mouse_scrollbar_area
-    }
 }
 
 impl<'a> Widget for &mut PasswordTable<'a> {
@@ -196,8 +192,13 @@ impl<'a> Widget for &mut PasswordTable<'a> {
         self.area = Some(area);
         let theme = self.theme;
 
-        let [table_area, s_area] =
+        let [table_area, right_area] =
             Layout::horizontal([Constraint::Min(1), Constraint::Length(1)]).areas(area);
+        let [above_track_area, track_area] =
+            Layout::vertical([Constraint::Length(1), Constraint::Min(1)]).areas(right_area);
+        buf.set_style(above_track_area, Style::new().bg(theme.table_header_bg));
+        // Draw handle event when no row is displayed
+        buf.set_style(track_area, Style::new().bg(theme.standard_fg));
 
         // Calculate areas for mouse interaction
         let mouse_content_area = Rect {
@@ -206,13 +207,13 @@ impl<'a> Widget for &mut PasswordTable<'a> {
             width: area.width.saturating_sub(8),
             height: area.height.saturating_sub(1),
         };
-        let mouse_scrollbar_area = Rect {
+        let mouse_track_area = Rect {
             x: area.width.saturating_sub(8),
             width: 8,
             ..mouse_content_area
         };
         self.mouse_content_area = Some(mouse_content_area);
-        self.mouse_scrollbar_area = Some(mouse_scrollbar_area);
+        self.mouse_track_area = Some(mouse_track_area);
 
         StatefulWidget::render(&self.table, table_area, buf, &mut self.table_state);
 
@@ -225,9 +226,9 @@ impl<'a> Widget for &mut PasswordTable<'a> {
                     .bg(theme.table_track_bg),
             )
             .thumb_style(Style::new().fg(theme.standard_fg).bg(theme.standard_bg))
-            .begin_symbol(Some(" "))
+            .begin_symbol(None)
             .end_symbol(None)
-            .render(s_area, buf, &mut self.scrollbar_state);
+            .render(track_area, buf, &mut self.scrollbar_state);
     }
 }
 
@@ -252,7 +253,7 @@ impl<'a> MouseSupport for PasswordTable<'a> {
         }
 
         // Mouse position on the scrollbar
-        if let Some(area) = self.mouse_scrollbar_area {
+        if let Some(area) = self.mouse_track_area {
             if area.contains(position) {
                 return match event.kind {
                     MouseEventKind::Down(MouseButton::Left)

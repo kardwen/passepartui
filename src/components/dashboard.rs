@@ -161,10 +161,6 @@ impl<'a> Dashboard<'a> {
     }
 
     fn update_pass_details(&mut self, pass_id: String, message: String) {
-        if !self.password_details.show_secrets {
-            return;
-        }
-
         match self.get_selected_info() {
             Some(info) if pass_id == info.pass_id => (),
             _ => return,
@@ -200,7 +196,7 @@ impl<'a> Dashboard<'a> {
         // let remainder = lines.fold(String::default(), |a, b| a + b);
         // if !remainder.is_empty() {}
 
-        self.password_details.number_of_lines = Some(count);
+        self.password_details.line_count = Some(count);
     }
 
     fn show_pass_secrets(&mut self) {
@@ -356,7 +352,6 @@ impl<'a> Component for Dashboard<'a> {
                     // Open file popup and fetch details
                     NavigationAction::File => {
                         self.app_state.overlay = OverlayState::File;
-                        self.show_pass_secrets();
                         Some(Action::Password(PasswordAction::Fetch))
                     }
                     NavigationAction::Leave => match self.app_state {
@@ -532,7 +527,7 @@ impl<'a> Widget for &mut Dashboard<'a> {
         // Search field
         match self.app_state.search {
             SearchState::Active | SearchState::Suspended => {
-                let search_width = 40.min(area.width);
+                let search_width = 35.min(area.width);
                 let popup_area = Rect {
                     x: area.width.saturating_sub(search_width + 1),
                     y: 3.min(area.height),

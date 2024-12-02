@@ -1,10 +1,11 @@
+use ratatui::{
+    buffer::Buffer, crossterm::event::MouseEvent, layout::Rect, style::Stylize, widgets::Widget,
+};
+
 use crate::{
     actions::{Action, NavigationAction},
     components::{Button, MouseSupport},
     theme::Theme,
-};
-use ratatui::{
-    buffer::Buffer, crossterm::event::MouseEvent, layout::Rect, style::Stylize, widgets::Widget,
 };
 
 #[derive(Debug, Default, Clone)]
@@ -60,8 +61,8 @@ impl<'a> Widget for &mut Menu<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         self.area = Some(area);
 
-        // Title bar and menu
-        let title = "passepartui α  "
+        // Logo
+        let title = "passepartui "
             .bold()
             .into_right_aligned_line()
             .fg(self.theme.menu_logo_fg)
