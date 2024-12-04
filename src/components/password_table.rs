@@ -219,7 +219,6 @@ impl<'a> Widget for &mut PasswordTable<'a> {
 
         Scrollbar::default()
             .orientation(ScrollbarOrientation::VerticalRight)
-            .begin_style(Style::new().bg(theme.table_header_bg))
             .track_style(
                 Style::new()
                     .fg(theme.table_track_fg)

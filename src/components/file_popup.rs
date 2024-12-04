@@ -75,7 +75,7 @@ impl<'a> Widget for &mut FilePopup<'a> {
 
         if let Some(pass_id) = self.pass_id.clone() {
             Paragraph::new(Line::from(vec![
-                "File identifier: ".fg(theme.debug),
+                "Password file ID: ".fg(theme.debug),
                 pass_id.into(),
             ]))
             .alignment(Alignment::Left)

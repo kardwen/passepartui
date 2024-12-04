@@ -3,7 +3,7 @@ pub enum Action {
     Navigation(NavigationAction),
     Password(PasswordAction),
     Search(SearchAction),
-    DisplayStatus(String),
+    SetStatus(String),
     ResetStatus,
     DisplaySecrets {
         pass_id: String,

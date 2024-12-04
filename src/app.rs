@@ -13,12 +13,12 @@ use crate::{
     app_state::{AppState, MainState, OverlayState, SearchState},
     components::{Component, Dashboard, MouseSupport},
 };
-use passepartout::ChannelEvent;
+use passepartout::{PasswordError, PasswordEvent};
 
 pub struct App<'a> {
     running: bool,
     tick_rate: Duration,
-    event_rx: Receiver<ChannelEvent>,
+    event_rx: Receiver<PasswordEvent>,
     dashboard: Dashboard<'a>,
 }
 
@@ -196,18 +196,28 @@ impl<'a> App<'a> {
         self.dashboard.handle_mouse_event(event)
     }
 
-    fn handle_channel_event(&mut self, event: ChannelEvent) -> Option<Action> {
+    fn handle_channel_event(&mut self, event: PasswordEvent) -> Option<Action> {
         match event {
-            ChannelEvent::Status(status) => Some(Action::DisplayStatus(status)),
-            ChannelEvent::ResetStatus => Some(Action::ResetStatus),
-            ChannelEvent::PasswordInfo {
+            PasswordEvent::Status(Ok(None)) => Some(Action::ResetStatus),
+            PasswordEvent::Status(Ok(Some(message))) => Some(Action::SetStatus(message)),
+            PasswordEvent::Status(Err(PasswordError::PassError(e))) => {
+                Some(Action::SetStatus(format!("✗ (pass) {e:?}")))
+            }
+            PasswordEvent::Status(Err(PasswordError::ClipboardUnavailable)) => {
+                Some(Action::SetStatus("✗ Clipboard not available".to_string()))
+            }
+            PasswordEvent::Status(Err(PasswordError::ClipboardError(e))) => {
+                Some(Action::SetStatus(format!("✗ {e:?}")))
+            }
+            PasswordEvent::ResetStatus => Some(Action::ResetStatus),
+            PasswordEvent::PasswordInfo {
                 pass_id,
                 file_contents,
             } => Some(Action::DisplaySecrets {
                 pass_id,
                 file_contents,
             }),
-            ChannelEvent::OneTimePassword {
+            PasswordEvent::OneTimePassword {
                 pass_id,
                 one_time_password,
             } => Some(Action::DisplayOneTimePassword {
