@@ -1,5 +1,5 @@
 #[derive(Default, Debug, Clone, Copy, PartialEq)]
-pub struct AppState {
+pub struct State {
     pub main: MainState,
     pub search: SearchState,
     pub overlay: OverlayState,

@@ -9,7 +9,7 @@ use std::sync::mpsc::Sender;
 
 use crate::{
     actions::{Action, NavigationAction, PasswordAction, SearchAction},
-    app_state::{AppState, MainState, OverlayState, SearchState},
+    app::{self, MainState, OverlayState, SearchState},
     components::{
         Component, FilePopup, HelpPopup, Menu, MouseSupport, PasswordDetails, PasswordTable,
         SearchField, StatusBar,
@@ -29,7 +29,7 @@ pub struct Dashboard<'a> {
     help_popup: HelpPopup<'a>,
     file_popup: FilePopup<'a>,
     status_bar: StatusBar,
-    pub app_state: AppState,
+    pub app_state: app::State,
     render_details: bool,
 }
 
@@ -52,7 +52,7 @@ impl<'a> Dashboard<'a> {
             help_popup,
             file_popup,
             status_bar: StatusBar::new(),
-            app_state: AppState::default(),
+            app_state: app::State::default(),
             render_details: true,
         };
         store.select_entry(0);
@@ -390,7 +390,7 @@ impl<'a> Component for Dashboard<'a> {
                         Some(Action::Password(PasswordAction::Fetch))
                     }
                     NavigationAction::Leave => match self.app_state {
-                        AppState {
+                        app::State {
                             main: _,
                             search: SearchState::Active,
                             overlay: OverlayState::Inactive,
@@ -403,7 +403,7 @@ impl<'a> Component for Dashboard<'a> {
                             }
                             None
                         }
-                        AppState {
+                        app::State {
                             main: _,
                             search: SearchState::Suspended,
                             overlay: OverlayState::Inactive,
@@ -416,12 +416,12 @@ impl<'a> Component for Dashboard<'a> {
                         _ => None,
                     },
                     NavigationAction::Back => match self.app_state {
-                        AppState {
+                        app::State {
                             main: MainState::Secrets,
                             search: SearchState::Inactive | SearchState::Suspended,
                             overlay: OverlayState::Inactive,
                         } => Some(Action::Navigation(NavigationAction::Preview)),
-                        AppState {
+                        app::State {
                             main: MainState::Preview,
                             search: SearchState::Inactive | SearchState::Suspended,
                             overlay: OverlayState::Inactive,
@@ -429,7 +429,7 @@ impl<'a> Component for Dashboard<'a> {
                             self.app_state.main = MainState::Table;
                             None
                         }
-                        AppState {
+                        app::State {
                             main: _,
                             search: _,
                             overlay: OverlayState::Help,
@@ -437,7 +437,7 @@ impl<'a> Component for Dashboard<'a> {
                             self.app_state.overlay = OverlayState::Inactive;
                             None
                         }
-                        AppState {
+                        app::State {
                             main: _,
                             search: _,
                             overlay: OverlayState::File,

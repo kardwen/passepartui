@@ -1,6 +1,5 @@
 mod actions;
 mod app;
-pub mod app_state;
 mod components;
 mod theme;
 
