@@ -88,7 +88,7 @@ Contributions are welcome! For architectural changes please start with opening a
 
 Build with [Ratatui](https://github.com/ratatui/ratatui).
 
-Library: [passepartout](https://github.com/kardwen/partout)
+Library for pass: [passepartout](https://github.com/kardwen/passepartout)
 
 TODO:
 
@@ -98,7 +98,7 @@ TODO:
 * Localisation for last modified column
 * Button animations for keyboard shortcuts
 
-Planned for future versions:
+Some possible features for future versions:
 
 * Background updates
 * Support for symbolic links in store
