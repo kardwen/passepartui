@@ -497,19 +497,23 @@ impl<'a> Component for Dashboard<'a> {
                 pass_id,
                 file_contents,
             } => {
+                self.status_bar.reset_status();
                 self.update_pass_details(pass_id, file_contents);
                 None
             }
             Action::DisplayOneTimePassword {
                 pass_id,
                 one_time_password,
-            } => match self.get_selected_info() {
-                Some(info) if pass_id == info.pass_id => {
-                    self.password_details.one_time_password = Some(one_time_password);
-                    None
+            } => {
+                self.status_bar.reset_status();
+                match self.get_selected_info() {
+                    Some(info) if pass_id == info.pass_id => {
+                        self.password_details.one_time_password = Some(one_time_password);
+                        None
+                    }
+                    _ => None,
                 }
-                _ => None,
-            },
+            }
             _ => None,
         };
         Ok(action)

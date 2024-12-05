@@ -209,7 +209,6 @@ impl<'a> App<'a> {
             PasswordEvent::Status(Err(PasswordError::ClipboardError(e))) => {
                 Some(Action::SetStatus(format!("✗ {e:?}")))
             }
-            PasswordEvent::ResetStatus => Some(Action::ResetStatus),
             PasswordEvent::PasswordInfo {
                 pass_id,
                 file_contents,

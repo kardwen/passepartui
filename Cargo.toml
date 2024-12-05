@@ -12,9 +12,8 @@ categories = ["authentication", "command-line-utilities"]
 
 [dependencies]
 anyhow = "1.0.93"
-icu = "1.5.0"
+passepartout = "0.1.3"
 ratatui = { version = "0.29.0", features = ["palette"] }
-passepartout = "0.1.2"
 
 [profile.dev]
 opt-level = 0
