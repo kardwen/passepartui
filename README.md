@@ -1,5 +1,8 @@
 # passepartui
 
+[![crates.io](https://img.shields.io/crates/v/passepartui.svg)](https://crates.io/crates/passepartui)
+[![Packaging status](https://repology.org/badge/tiny-repos/passepartui.svg)](https://repology.org/project/passepartui/versions)
+
 <img src="passepartui_screenshot.png" width="80%">
 
 A TUI for pass
