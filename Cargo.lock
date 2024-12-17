@@ -1301,9 +1301,9 @@ dependencies = [
 
 [[package]]
 name = "passepartout"
-version = "0.1.3"
+version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87c263e348e24f36f8b2e20acdd0005e591b4e5b68263ad6f2c43ac12600f598"
+checksum = "8136dcce850c109ae872f0e6efd515aca6ac710b58960e6cb08457c3d60df0f4"
 dependencies = [
  "arboard",
  "dirs",

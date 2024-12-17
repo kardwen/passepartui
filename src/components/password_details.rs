@@ -8,13 +8,13 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph, Widget, Wrap},
 };
 
+mod details_field;
+
 use crate::{
     actions::{Action, NavigationAction, PasswordAction},
     components::{Button, MouseSupport},
     theme::Theme,
 };
-
-mod details_field;
 use details_field::DetailsField;
 
 #[derive(Debug, Default)]

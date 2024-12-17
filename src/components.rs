@@ -1,3 +1,6 @@
+use anyhow::Result;
+use ratatui::{crossterm::event::MouseEvent, layout::Rect};
+
 mod button;
 mod dashboard;
 mod file_popup;
@@ -9,9 +12,6 @@ mod search_field;
 mod status_bar;
 
 use crate::actions::Action;
-use anyhow::Result;
-use ratatui::{crossterm::event::MouseEvent, layout::Rect};
-
 pub use button::Button;
 pub use dashboard::Dashboard;
 pub use file_popup::FilePopup;

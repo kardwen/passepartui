@@ -1,4 +1,5 @@
 use anyhow::Result;
+use passepartout::{PasswordError, PasswordEvent};
 use ratatui::{
     crossterm::event::{self, Event as TerminalEvent, KeyCode, KeyEvent, KeyEventKind, MouseEvent},
     DefaultTerminal,
@@ -8,12 +9,13 @@ use std::{
     time::Duration,
 };
 
+mod state;
+
 use crate::{
     actions::{Action, NavigationAction, PasswordAction, SearchAction},
-    app_state::{AppState, MainState, OverlayState, SearchState},
     components::{Component, Dashboard, MouseSupport},
 };
-use passepartout::{PasswordError, PasswordEvent};
+pub use state::{MainState, OverlayState, SearchState, State};
 
 pub struct App<'a> {
     running: bool,
@@ -72,7 +74,7 @@ impl<'a> App<'a> {
 
     fn handle_key_event(&mut self, key_event: KeyEvent) -> Option<Action> {
         match self.dashboard.app_state {
-            AppState {
+            State {
                 main: MainState::Preview | MainState::Secrets,
                 search: SearchState::Inactive | SearchState::Suspended,
                 overlay: OverlayState::Inactive,
@@ -113,7 +115,7 @@ impl<'a> App<'a> {
                 }
                 _ => None,
             },
-            AppState {
+            State {
                 main: MainState::Table,
                 search: SearchState::Inactive | SearchState::Suspended,
                 overlay: OverlayState::Inactive,
@@ -150,7 +152,7 @@ impl<'a> App<'a> {
                 }
                 _ => None,
             },
-            AppState {
+            State {
                 main: _,
                 search: SearchState::Active,
                 overlay: OverlayState::Inactive,
@@ -170,7 +172,7 @@ impl<'a> App<'a> {
                 KeyCode::End => Some(Action::Search(SearchAction::MoveToEnd)),
                 _ => None,
             },
-            AppState {
+            State {
                 main: _,
                 search: _,
                 overlay: OverlayState::Help,
@@ -178,7 +180,7 @@ impl<'a> App<'a> {
                 KeyCode::Esc | KeyCode::F(1) => Some(Action::Navigation(NavigationAction::Back)),
                 _ => None,
             },
-            AppState {
+            State {
                 main: _,
                 search: _,
                 overlay: OverlayState::File,

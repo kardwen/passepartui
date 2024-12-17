@@ -12,7 +12,7 @@ categories = ["authentication", "command-line-utilities"]
 
 [dependencies]
 anyhow = "1.0.93"
-passepartout = "0.1.3"
+passepartout = "0.1.4"
 ratatui = { version = "0.29.0", features = ["palette"] }
 
 [profile.dev]
