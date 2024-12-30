@@ -61,6 +61,15 @@ can install it in your system via the usual ways, or try it with:
 nix run nixpkgs#passepartui
 ```
 
+### Installation with Homebrew
+
+A tap for installing `passepartui` with [Homebrew](https://brew.sh/) is available with this [repository](https://github.com/kardwen/homebrew-passepartui).
+
+```sh
+brew tap kardwen/passepartui
+brew install passepartui
+```
+
 ### Manual installation
 
 Clone the repository and change to the directory:
