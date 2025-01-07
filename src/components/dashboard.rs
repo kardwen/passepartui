@@ -1,4 +1,10 @@
 use anyhow::Result;
+use futures::{
+    self,
+    channel::oneshot,
+    executor::{block_on, ThreadPool},
+};
+use passepartout::{PasswordInfo, PasswordStore};
 use ratatui::{
     buffer::Buffer,
     crossterm::event::MouseEvent,
@@ -14,11 +20,49 @@ use crate::{
         Component, FilePopup, HelpPopup, Menu, MouseSupport, PasswordDetails, PasswordTable,
         SearchField, StatusBar,
     },
+    event::PasswordEvent,
 };
 
-use passepartout::{PasswordError, PasswordEvent, PasswordInfo, PasswordStore};
+#[derive(Default)]
+struct LastOperation {
+    pass_id: String,
+    class: String,
+    completion_receiver: Option<oneshot::Receiver<u8>>,
+}
+
+impl LastOperation {
+    /// Determines if a new operation is allowed and then updates itself and
+    /// returns a sender if permitted.
+    ///
+    /// An operation is allowed when:
+    /// - The password ID is different from the last operation
+    /// - The operation is from a different class than the last operation
+    /// - The last operation has completed
+    pub fn allows(&mut self, pass_id: &str, class: &str) -> Option<oneshot::Sender<u8>> {
+        if pass_id != self.pass_id || class != self.class {
+            self.update(pass_id, class)
+        } else if let Some(ref mut receiver) = self.completion_receiver {
+            match receiver.try_recv() {
+                Ok(None) => None,
+                Ok(Some(_)) | Err(oneshot::Canceled) => self.update(pass_id, class),
+            }
+        } else {
+            None
+        }
+    }
+
+    /// Returns a new sender that can be used to send a completion signal.
+    fn update(&mut self, pass_id: &str, class: &str) -> Option<oneshot::Sender<u8>> {
+        self.pass_id = pass_id.to_string();
+        self.class = class.to_string();
+        let (sender, receiver) = oneshot::channel::<u8>();
+        self.completion_receiver = Some(receiver);
+        Some(sender)
+    }
+}
 
 pub struct Dashboard<'a> {
+    tty_pinentry: bool,
     store: PasswordStore,
     area: Option<Rect>,
     password_subset: Vec<usize>,
@@ -31,17 +75,25 @@ pub struct Dashboard<'a> {
     status_bar: StatusBar,
     pub app_state: app::State,
     render_details: bool,
+    pool: ThreadPool,
+    last_op: LastOperation,
+    event_tx: Sender<PasswordEvent>,
 }
 
 impl<'a> Dashboard<'a> {
-    pub fn new(event_tx: Sender<PasswordEvent>) -> Self {
-        let store = PasswordStore::new(event_tx);
+    pub fn new(tty_pinentry: bool, event_tx: Sender<PasswordEvent>) -> Self {
+        let store = PasswordStore::new();
         let password_refs: Vec<&PasswordInfo> = store.passwords.iter().collect();
         let password_subset = (0..store.passwords.len()).collect();
         let search_field = SearchField::new();
         let help_popup = HelpPopup::new();
         let file_popup = FilePopup::new();
-        let mut store = Self {
+        let pool = ThreadPool::builder()
+            .pool_size(2)
+            .create()
+            .expect("this should work");
+        let mut dashboard = Self {
+            tty_pinentry,
             area: None,
             password_table: PasswordTable::new(&password_refs),
             store,
@@ -54,9 +106,12 @@ impl<'a> Dashboard<'a> {
             status_bar: StatusBar::new(),
             app_state: app::State::default(),
             render_details: true,
+            pool,
+            last_op: LastOperation::default(),
+            event_tx,
         };
-        store.select_entry(0);
-        store
+        dashboard.select_entry(0);
+        dashboard
     }
 
     pub fn next(&mut self, step: usize) {
@@ -160,10 +215,10 @@ impl<'a> Dashboard<'a> {
         self.select_entry(index);
     }
 
-    fn update_pass_details(&mut self, pass_id: String, message: String) {
+    fn update_pass_details(&mut self, pass_id: String, message: String) -> Option<Action> {
         match self.get_selected_info() {
             Some(info) if pass_id == info.pass_id => (),
-            _ => return,
+            _ => return None,
         }
 
         self.file_popup.set_content(&pass_id, &message.clone());
@@ -188,15 +243,18 @@ impl<'a> Dashboard<'a> {
             count += 1;
             next_line = lines.next();
         }
-        if has_otp {
-            self.password_details.one_time_password = Some("*".repeat(6));
-            self.store.fetch_otp(pass_id);
-        }
 
         // let remainder = lines.fold(String::default(), |a, b| a + b);
         // if !remainder.is_empty() {}
 
         self.password_details.line_count = Some(count);
+
+        if has_otp {
+            self.password_details.one_time_password = Some("*".repeat(6));
+            Some(Action::Password(PasswordAction::FetchOtp))
+        } else {
+            None
+        }
     }
 
     fn show_pass_secrets(&mut self) {
@@ -213,46 +271,6 @@ impl<'a> Component for Dashboard<'a> {
     fn update(&mut self, action: Action) -> Result<Option<Action>> {
         let action = match action {
             Action::Password(action) => match action {
-                PasswordAction::Fetch => {
-                    if self.get_selected_info().is_some() {
-                        self.status_bar
-                            .set_status("⧗ (pass) Fetching password entry...".to_string());
-                    }
-                    if let Some(info) = self.get_selected_info() {
-                        self.store.fetch_entry(info.pass_id.clone());
-                    }
-                    None
-                }
-                PasswordAction::CopyPassword => {
-                    if self.get_selected_info().is_some() {
-                        self.status_bar
-                            .set_status("⧗ (pass) Copying password...".to_string());
-                    }
-                    if let Some(info) = self.get_selected_info() {
-                        self.store.copy_password(info.pass_id.clone());
-                    }
-                    None
-                }
-                PasswordAction::CopyOneTimePassword => {
-                    if self.get_selected_info().is_some() {
-                        self.status_bar
-                            .set_status("⧗ (pass) Copying one-time password...".to_string());
-                    }
-                    if let Some(info) = self.get_selected_info() {
-                        self.store.copy_otp(info.pass_id.clone());
-                    }
-                    None
-                }
-                PasswordAction::FetchOneTimePassword => {
-                    if self.get_selected_info().is_some() {
-                        self.status_bar
-                            .set_status("⧗ (pass) Fetching one-time password...".to_string());
-                    }
-                    if let Some(info) = self.get_selected_info() {
-                        self.store.fetch_otp(info.pass_id.clone());
-                    }
-                    None
-                }
                 PasswordAction::CopyPassId => {
                     if let Some(info) = self.get_selected_info() {
                         match passepartout::copy_id(info.pass_id.clone()) {
@@ -260,12 +278,8 @@ impl<'a> Component for Dashboard<'a> {
                                 let message = "Password file ID copied to clipboard".to_string();
                                 Some(Action::SetStatus(message))
                             }
-                            Err(PasswordError::ClipboardError(e)) => {
-                                let message = format!("✗ Failed to copy password file ID: {e:?}");
-                                Some(Action::SetStatus(message))
-                            }
-                            Err(PasswordError::ClipboardUnavailable) => {
-                                let message = String::from("✗ Clipboard not available");
+                            Err(passepartout::Error::Clipboard(e)) => {
+                                let message = format!("✗ Clipboard error: {e:?}");
                                 Some(Action::SetStatus(message))
                             }
                             Err(_) => None,
@@ -274,15 +288,196 @@ impl<'a> Component for Dashboard<'a> {
                         None
                     }
                 }
-                PasswordAction::CopyLogin => {
-                    if self.get_selected_info().is_some() {
-                        self.status_bar
-                            .set_status("⧗ (pass) Copying login...".to_string());
-                    }
+                PasswordAction::CopyPassword => {
                     if let Some(info) = self.get_selected_info() {
-                        self.store.copy_login(info.pass_id.clone());
+                        let pass_id = info.pass_id.clone();
+                        if let Some(completion_beacon) =
+                            self.last_op.allows(&pass_id, "copy_password")
+                        {
+                            let file_path = self.store.store_dir.join(format!("{}.gpg", pass_id));
+                            let event_tx = self.event_tx.clone();
+
+                            let future = async move {
+                                let event = match passepartout::copy_password(&file_path) {
+                                    Ok(_) => {
+                                        let status_message =
+                                            "Password copied to clipboard, clears after 45 seconds"
+                                                .to_string();
+                                        PasswordEvent::Status(Ok(Some(status_message)))
+                                    }
+                                    Err(e) => PasswordEvent::Status(Err(e)),
+                                };
+                                event_tx.send(event).expect("receiver deallocated");
+                                let _ = completion_beacon.send(1);
+                            };
+
+                            if self.tty_pinentry {
+                                block_on(future);
+                                Some(Action::Redraw)
+                            } else {
+                                self.pool.spawn_ok(future);
+                                let status_message = "⧗ (pass) Copying password...".to_string();
+                                Some(Action::SetStatus(status_message))
+                            }
+                        } else {
+                            None
+                        }
+                    } else {
+                        let status_message = "No entry selected".to_string();
+                        Some(Action::SetStatus(status_message))
                     }
-                    None
+                }
+                PasswordAction::CopyLogin => {
+                    if let Some(info) = self.get_selected_info() {
+                        let pass_id = info.pass_id.clone();
+                        if let Some(completion_beacon) =
+                            self.last_op.allows(&pass_id, "copy_password")
+                        {
+                            let file_path = self.store.store_dir.join(format!("{}.gpg", pass_id));
+                            let event_tx = self.event_tx.clone();
+
+                            let future = async move {
+                                let event = match passepartout::copy_login(&file_path) {
+                                    Ok(_) => {
+                                        let status_message =
+                                            "Login copied to clipboard, clears after 45 seconds"
+                                                .to_string();
+                                        PasswordEvent::Status(Ok(Some(status_message)))
+                                    }
+                                    Err(e) => PasswordEvent::Status(Err(e)),
+                                };
+                                event_tx.send(event).expect("receiver deallocated");
+                                let _ = completion_beacon.send(1);
+                            };
+
+                            if self.tty_pinentry {
+                                block_on(future);
+                                Some(Action::Redraw)
+                            } else {
+                                self.pool.spawn_ok(future);
+                                let status_message = "⧗ (pass) Copying login...".to_string();
+                                Some(Action::SetStatus(status_message))
+                            }
+                        } else {
+                            None
+                        }
+                    } else {
+                        let status_message = "No entry selected".to_string();
+                        Some(Action::SetStatus(status_message))
+                    }
+                }
+                PasswordAction::CopyOtp => {
+                    if let Some(info) = self.get_selected_info() {
+                        let pass_id = info.pass_id.clone();
+                        if let Some(completion_beacon) =
+                            self.last_op.allows(&pass_id, "copy_password")
+                        {
+                            let file_path = self.store.store_dir.join(format!("{}.gpg", pass_id));
+                            let event_tx = self.event_tx.clone();
+
+                            let future = async move {
+                                let event = match passepartout::copy_otp(&file_path) {
+                                    Ok(_) => {
+                                        let status_message =
+                                        "One-time password copied to clipboard, clears after 45 seconds"
+                                            .to_string();
+                                        PasswordEvent::Status(Ok(Some(status_message)))
+                                    }
+                                    Err(e) => PasswordEvent::Status(Err(e)),
+                                };
+                                event_tx.send(event).expect("receiver deallocated");
+                                let _ = completion_beacon.send(1);
+                            };
+
+                            if self.tty_pinentry {
+                                block_on(future);
+                                Some(Action::Redraw)
+                            } else {
+                                self.pool.spawn_ok(future);
+                                let status_message =
+                                    "⧗ (pass) Copying one-time password...".to_string();
+                                Some(Action::SetStatus(status_message))
+                            }
+                        } else {
+                            None
+                        }
+                    } else {
+                        let status_message = "No entry selected".to_string();
+                        Some(Action::SetStatus(status_message))
+                    }
+                }
+                PasswordAction::Fetch => {
+                    if let Some(info) = self.get_selected_info() {
+                        let pass_id = info.pass_id.clone();
+                        if let Some(completion_beacon) =
+                            self.last_op.allows(&pass_id, "decrypt_password_file")
+                        {
+                            let file_path = self.store.store_dir.join(format!("{}.gpg", pass_id));
+                            let event_tx = self.event_tx.clone();
+
+                            let future = async move {
+                                let event = match passepartout::decrypt_password_file(&file_path) {
+                                    Ok(file_contents) => PasswordEvent::PasswordFile {
+                                        pass_id,
+                                        file_contents,
+                                    },
+                                    Err(e) => PasswordEvent::Status(Err(e)),
+                                };
+                                event_tx.send(event).expect("receiver deallocated");
+                                let _ = completion_beacon.send(1);
+                            };
+
+                            if self.tty_pinentry {
+                                block_on(future);
+                                Some(Action::Redraw)
+                            } else {
+                                self.pool.spawn_ok(future);
+                                let status_message =
+                                    "⧗ (pass) Fetching password entry...".to_string();
+                                Some(Action::SetStatus(status_message))
+                            }
+                        } else {
+                            None
+                        }
+                    } else {
+                        let status_message = "No entry selected".to_string();
+                        Some(Action::SetStatus(status_message))
+                    }
+                }
+                PasswordAction::FetchOtp => {
+                    if let Some(info) = self.get_selected_info() {
+                        let pass_id = info.pass_id.clone();
+                        if let Some(completion_beacon) =
+                            self.last_op.allows(&pass_id, "copy_password")
+                        {
+                            let file_path = self.store.store_dir.join(format!("{}.gpg", pass_id));
+                            let event_tx = self.event_tx.clone();
+
+                            let future = async move {
+                                let event = match passepartout::generate_otp(&file_path) {
+                                    Ok(otp) => PasswordEvent::OneTimePassword { pass_id, otp },
+                                    Err(e) => PasswordEvent::Status(Err(e)),
+                                };
+                                event_tx.send(event).expect("receiver deallocated");
+                                let _ = completion_beacon.send(1);
+                            };
+
+                            if self.tty_pinentry {
+                                block_on(future);
+                                Some(Action::Redraw)
+                            } else {
+                                self.pool.spawn_ok(future);
+                                let status_message =
+                                    "⧗ (pass) Fetching one-time password...".to_string();
+                                Some(Action::SetStatus(status_message))
+                            }
+                        } else {
+                            None
+                        }
+                    } else {
+                        let status_message = "No entry selected".to_string();
+                        Some(Action::SetStatus(status_message))
+                    }
                 }
             },
             Action::Navigation(action) => {
@@ -498,17 +693,13 @@ impl<'a> Component for Dashboard<'a> {
                 file_contents,
             } => {
                 self.status_bar.reset_status();
-                self.update_pass_details(pass_id, file_contents);
-                None
+                self.update_pass_details(pass_id, file_contents)
             }
-            Action::DisplayOneTimePassword {
-                pass_id,
-                one_time_password,
-            } => {
+            Action::DisplayOneTimePassword { pass_id, otp } => {
                 self.status_bar.reset_status();
                 match self.get_selected_info() {
                     Some(info) if pass_id == info.pass_id => {
-                        self.password_details.one_time_password = Some(one_time_password);
+                        self.password_details.one_time_password = Some(otp);
                         None
                     }
                     _ => None,

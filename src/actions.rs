@@ -11,9 +11,10 @@ pub enum Action {
     },
     DisplayOneTimePassword {
         pass_id: String,
-        one_time_password: String,
+        otp: String,
     },
     NoOp,
+    Redraw,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -50,10 +51,10 @@ pub enum SearchAction {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PasswordAction {
-    CopyPassId,
     Fetch,
+    FetchOtp,
+    CopyPassId,
     CopyPassword,
     CopyLogin,
-    FetchOneTimePassword,
-    CopyOneTimePassword,
+    CopyOtp,
 }

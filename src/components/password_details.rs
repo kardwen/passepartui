@@ -97,14 +97,14 @@ impl PasswordDetails<'_> {
                 .keyboard_label("(x)".fg(theme.button_keyboard_label))
                 .dimensions(10, 3)
                 .padded()
-                .action_on_click(Action::Password(PasswordAction::CopyOneTimePassword)),
+                .action_on_click(Action::Password(PasswordAction::CopyOtp)),
         )
         .button(
             Button::new("Refresh".fg(theme.button_label))
                 .keyboard_label("(r)".fg(theme.button_keyboard_label))
                 .dimensions(13, 3)
                 .padded()
-                .action_on_click(Action::Password(PasswordAction::FetchOneTimePassword)),
+                .action_on_click(Action::Password(PasswordAction::FetchOtp)),
         );
         let login_field = DetailsField::new(Line::from(vec![
             "Login"

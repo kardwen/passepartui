@@ -1,7 +1,7 @@
 [package]
 name = "passepartui"
 description = "A TUI for pass"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 authors = ["Karl Felix Schewe"]
 readme = "README.md"
@@ -12,7 +12,8 @@ categories = ["authentication", "command-line-utilities"]
 
 [dependencies]
 anyhow = "1.0.93"
-passepartout = "0.1.4"
+futures = { version = "0.3.31", features = ["executor", "thread-pool"] }
+passepartout = "0.1.5"
 ratatui = { version = "0.29.0", features = ["palette"] }
 
 [profile.dev]

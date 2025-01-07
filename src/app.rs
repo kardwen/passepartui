@@ -1,5 +1,4 @@
 use anyhow::Result;
-use passepartout::{PasswordError, PasswordEvent};
 use ratatui::{
     crossterm::event::{self, Event as TerminalEvent, KeyCode, KeyEvent, KeyEventKind, MouseEvent},
     DefaultTerminal,
@@ -14,22 +13,25 @@ mod state;
 use crate::{
     actions::{Action, NavigationAction, PasswordAction, SearchAction},
     components::{Component, Dashboard, MouseSupport},
+    event::PasswordEvent,
 };
 pub use state::{MainState, OverlayState, SearchState, State};
 
 pub struct App<'a> {
     running: bool,
+    complete_redraw: bool,
     tick_rate: Duration,
     event_rx: Receiver<PasswordEvent>,
     dashboard: Dashboard<'a>,
 }
 
 impl<'a> App<'a> {
-    pub fn new() -> Self {
+    pub fn new(tty_pinentry: bool) -> Self {
         let (event_tx, event_rx) = mpsc::channel();
         Self {
-            dashboard: Dashboard::new(event_tx),
+            dashboard: Dashboard::new(tty_pinentry, event_tx),
             running: false,
+            complete_redraw: false,
             tick_rate: Duration::from_millis(80),
             event_rx,
         }
@@ -39,6 +41,10 @@ impl<'a> App<'a> {
         self.running = true;
         // Application loop
         while self.running {
+            if self.complete_redraw {
+                let _ = terminal.clear();
+                self.complete_redraw = false;
+            }
             terminal.draw(|frame| frame.render_widget(&mut self.dashboard, frame.area()))?;
             self.handle_events()?;
         }
@@ -105,8 +111,8 @@ impl<'a> App<'a> {
                 KeyCode::Char('/') => Some(Action::Navigation(NavigationAction::Search)),
                 KeyCode::F(1) => Some(Action::Navigation(NavigationAction::Help)),
                 KeyCode::Char('i') => Some(Action::Navigation(NavigationAction::File)),
-                KeyCode::Char('r') => Some(Action::Password(PasswordAction::FetchOneTimePassword)),
-                KeyCode::Char('x') => Some(Action::Password(PasswordAction::CopyOneTimePassword)),
+                KeyCode::Char('r') => Some(Action::Password(PasswordAction::FetchOtp)),
+                KeyCode::Char('x') => Some(Action::Password(PasswordAction::CopyOtp)),
                 KeyCode::Char('c') => Some(Action::Password(PasswordAction::CopyPassId)),
                 KeyCode::Char('v') => Some(Action::Password(PasswordAction::CopyLogin)),
                 KeyCode::Esc => Some(Action::Navigation(NavigationAction::Leave)),
@@ -143,7 +149,7 @@ impl<'a> App<'a> {
                 KeyCode::Char('/') => Some(Action::Navigation(NavigationAction::Search)),
                 KeyCode::F(1) => Some(Action::Navigation(NavigationAction::Help)),
                 KeyCode::Char('i') => Some(Action::Navigation(NavigationAction::File)),
-                KeyCode::Char('x') => Some(Action::Password(PasswordAction::CopyOneTimePassword)),
+                KeyCode::Char('x') => Some(Action::Password(PasswordAction::CopyOtp)),
                 KeyCode::Char('c') => Some(Action::Password(PasswordAction::CopyPassId)),
                 KeyCode::Char('v') => Some(Action::Password(PasswordAction::CopyLogin)),
                 KeyCode::Esc => Some(Action::Navigation(NavigationAction::Leave)),
@@ -202,48 +208,56 @@ impl<'a> App<'a> {
         match event {
             PasswordEvent::Status(Ok(None)) => Some(Action::ResetStatus),
             PasswordEvent::Status(Ok(Some(message))) => Some(Action::SetStatus(message)),
-            PasswordEvent::Status(Err(PasswordError::PassError(e))) => {
+            PasswordEvent::Status(Err(passepartout::Error::Pass(e))) => {
                 Some(Action::SetStatus(format!("✗ (pass) {e:?}")))
             }
-            PasswordEvent::Status(Err(PasswordError::ClipboardUnavailable)) => {
-                Some(Action::SetStatus("✗ Clipboard not available".to_string()))
+            PasswordEvent::Status(Err(passepartout::Error::Clipboard(e))) => {
+                Some(Action::SetStatus(format!("✗ Clipboard error: {e:?}")))
             }
-            PasswordEvent::Status(Err(PasswordError::ClipboardError(e))) => {
-                Some(Action::SetStatus(format!("✗ {e:?}")))
-            }
-            PasswordEvent::PasswordInfo {
+            PasswordEvent::Status(Err(e)) => Some(Action::SetStatus(format!("✗ {e:?}"))),
+            PasswordEvent::PasswordFile {
                 pass_id,
                 file_contents,
             } => Some(Action::DisplaySecrets {
                 pass_id,
                 file_contents,
             }),
-            PasswordEvent::OneTimePassword {
-                pass_id,
-                one_time_password,
-            } => Some(Action::DisplayOneTimePassword {
-                pass_id,
-                one_time_password,
-            }),
+            PasswordEvent::OneTimePassword { pass_id, otp } => {
+                Some(Action::DisplayOneTimePassword { pass_id, otp })
+            }
         }
     }
 
     fn dispatch_action(&mut self, action: Action) -> Result<()> {
-        let mut next_action = self.dashboard.update(action.clone())?;
-        while let Some(action) = next_action {
-            next_action = self.dashboard.update(action)?;
+        let mut current_action = action;
+        loop {
+            // Actions from App take precedence
+            if let Some(next) = self.update(current_action.clone())? {
+                current_action = next;
+                continue;
+            }
+
+            if let Some(next) = self.dashboard.update(current_action.clone())? {
+                current_action = next;
+                continue;
+            }
+
+            break;
         }
-
-        let _ = self.update(action)?;
-
         Ok(())
     }
 
     fn update(&mut self, action: Action) -> Result<Option<Action>> {
-        if let Action::Navigation(NavigationAction::Quit) = action {
-            self.quit();
+        match action {
+            Action::Navigation(NavigationAction::Quit) => self.quit(),
+            Action::Redraw => self.request_redraw(),
+            _ => (),
         }
         Ok(None)
+    }
+
+    fn request_redraw(&mut self) {
+        self.complete_redraw = true;
     }
 
     fn quit(&mut self) {
