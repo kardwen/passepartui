@@ -31,7 +31,7 @@ The name `passepartui` is a combination of "passepartout", French for "master ke
 ### Prerequisites
 
 * Unix (tested on Linux so far)
-* `pass`, optionally `pass-otp` for one-time passwords
+* C library [`gpgme`](https://gnupg.org/software/gpgme/index.html) for decryption operations
 * Rust and cargo (when compiling from source)
 
 ### Installation from crates.io
@@ -102,6 +102,11 @@ Build with [Ratatui](https://github.com/ratatui/ratatui).
 
 Library for pass: [passepartout](https://github.com/kardwen/passepartout)
 
+```sh
+cargo clippy
+cargo fmt
+```
+
 TODO:
 
 * General refactoring
@@ -124,14 +129,3 @@ Some possible features for future versions:
   * displaying flags for set fields in the password table
 * Sorting of the password table by columns
 * Improvements for running `passepartui` in TTY
-
-Clippy:
-
-```sh
-rustup component add clippy
-```
-
-```sh
-cargo clippy
-cargo fmt
-```
