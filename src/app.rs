@@ -25,7 +25,7 @@ pub struct App<'a> {
     dashboard: Dashboard<'a>,
 }
 
-impl<'a> App<'a> {
+impl App<'_> {
     pub fn new(tty_pinentry: bool) -> Self {
         let (event_tx, event_rx) = mpsc::channel();
         Self {

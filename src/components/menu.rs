@@ -17,7 +17,7 @@ pub struct Menu<'a> {
     quit_button: Button<'a>,
 }
 
-impl<'a> Menu<'a> {
+impl Menu<'_> {
     pub fn new() -> Self {
         let theme = Theme::new();
         let search_button = Button::new("Search".fg(theme.menu_button_label))
@@ -57,7 +57,7 @@ impl<'a> Menu<'a> {
     }
 }
 
-impl<'a> Widget for &mut Menu<'a> {
+impl Widget for &mut Menu<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         self.area = Some(area);
 
@@ -96,7 +96,7 @@ impl<'a> Widget for &mut Menu<'a> {
     }
 }
 
-impl<'a> MouseSupport for Menu<'a> {
+impl MouseSupport for Menu<'_> {
     fn handle_mouse_event(&mut self, event: MouseEvent) -> Option<Action> {
         let buttons = vec![
             &mut self.search_button,

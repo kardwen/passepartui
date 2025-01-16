@@ -158,7 +158,7 @@ impl<'a> Button<'a> {
     }
 }
 
-impl<'a> Widget for &mut Button<'a> {
+impl Widget for &mut Button<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let (background, shadow, highlight) = self.colors();
 
@@ -245,7 +245,7 @@ impl<'a> Widget for &mut Button<'a> {
     }
 }
 
-impl<'a> MouseSupport for Button<'a> {
+impl MouseSupport for Button<'_> {
     fn handle_mouse_event(&mut self, event: MouseEvent) -> Option<Action> {
         let position = Position::new(event.column, event.row);
         match self.get_area() {

@@ -23,7 +23,7 @@ pub struct FilePopup<'a> {
     close_button: Button<'a>,
 }
 
-impl<'a> FilePopup<'a> {
+impl FilePopup<'_> {
     pub fn new() -> Self {
         let theme = Theme::new();
         FilePopup {
@@ -50,7 +50,7 @@ impl<'a> FilePopup<'a> {
     }
 }
 
-impl<'a> Widget for &mut FilePopup<'a> {
+impl Widget for &mut FilePopup<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         self.area = Some(area);
         let theme = self.theme;
@@ -110,7 +110,7 @@ impl<'a> Widget for &mut FilePopup<'a> {
     }
 }
 
-impl<'a> MouseSupport for FilePopup<'a> {
+impl MouseSupport for FilePopup<'_> {
     fn handle_mouse_event(&mut self, event: MouseEvent) -> Option<Action> {
         self.close_button
             .handle_mouse_event(event)

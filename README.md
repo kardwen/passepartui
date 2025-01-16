@@ -3,22 +3,15 @@
 [![crates.io](https://img.shields.io/crates/v/passepartui.svg)](https://crates.io/crates/passepartui)
 [![Packaging status](https://repology.org/badge/tiny-repos/passepartui.svg)](https://repology.org/project/passepartui/versions)
 
-<img src="passepartui_screenshot.png" width="80%">
+<img src="passepartui_screenshot.png" width="75%">
 
 A TUI for pass
 
 ## Introduction
 
-I started this project as a way to practice programming in Rust while reading the [Rust Book](https://doc.rust-lang.org/stable/book/title-page.html).
-Therefore, this project is still in an alpha state, however, user interaction is mostly finished.
+`passepartui` is a text-based user interface (TUI) for [`pass`](https://www.passwordstore.org/) designed for fast and intuitive access to the password store.
 
-`passepartui` relies for all decryption operations on [pass](https://www.passwordstore.org/), one-time passwords (OTP) are handled by [pass-otp](https://github.com/tadfisher/pass-otp).
-Currently, no functionality for manipulating the password store (e.g. adding or deleting a password) is implemented. For those operations use `pass` directly from your terminal (refer to `man pass`).
-More on the current state of development can be found below.
-
-The name `passepartui` is a combination of "passepartout", French for "master key", and "TUI".
-
-## Features
+**Features**:
 
 * Easy navigation with arrow keys and Vim keybindings
 * Searching and filtering of passwords
@@ -26,12 +19,18 @@ The name `passepartui` is a combination of "passepartout", French for "master ke
   passwords and one-time passwords
 * Mouse support (limited)
 
+This project is still in an *alpha* state, however, user interaction is mostly done. The reason for this is that I started this project as a way to practice programming in Rust while reading the [Rust Book](https://doc.rust-lang.org/stable/book/title-page.html).
+
+Currently, no functionality for manipulating the password store (e.g. adding or deleting a password) is implemented. For those operations use `pass` directly from your terminal (refer to `man pass`).
+
+The name `passepartui` is a combination of "passepartout", French for "master key", and "TUI".
+
 ## Installation
 
 ### Prerequisites
 
 * Unix (tested on Linux so far)
-* C library [`gpgme`](https://gnupg.org/software/gpgme/index.html) for decryption operations
+* C system library [`gpgme`](https://gnupg.org/software/gpgme/index.html) for decryption operations
 * Rust and cargo (when compiling from source)
 
 ### Installation from crates.io
@@ -88,44 +87,20 @@ cp target/release/passepartui ~/.cargo/bin
 
 Run `passepartui` in a terminal.
 
-## Contrib
+## Miscellaneous
 
-The `contrib` directory contains additional files, for now an example for a desktop file.
+The `contrib` directory contains additional files, for now an example for a desktop entry file.
 
-A desktop entry lets you start `passepartui` with your application menu. Edit the desktop file `passepartui.desktop` to use your terminal emulator for running `passepartui` and copy it to `$XDG_DATA_HOME/applications` which is usually `~/.local/share/applications`.
+A desktop entry lets you start `passepartui` from an application menu in a new terminal window. Configure your preferred terminal emulator for running `passepartui` in the desktop file `passepartui.desktop` and copy it to `$XDG_DATA_HOME/applications` which is usually `~/.local/share/applications`.
 
 ## Development
 
-Contributions are welcome! For architectural changes please start with opening an issue.
+Contributions are very welcome!
+Take a look at the [open issues](https://github.com/kardwen/passepartui/issues) to get started.
 
-Build with [Ratatui](https://github.com/ratatui/ratatui).
+List of libraries used (among others):
 
-Library for pass: [passepartout](https://github.com/kardwen/passepartout)
-
-```sh
-cargo clippy
-cargo fmt
-```
-
-TODO:
-
-* General refactoring
-* Tests
-* Mouse support overhaul
-* Localisation for last modified column
-* Button animations for keyboard shortcuts
-
-Some possible features for future versions:
-
-* Background updates
-* Support for symbolic links in store
-* Tree view for folders (for example [Ratatui Tree Widget](https://github.com/EdJoPaTo/tui-rs-tree-widget))
-* Configuration file for setting options
-* Theming, e.g. for using the terminal color theme
-* Decryption of password files with Rust (possibly with sequoia-openpgp).
-  This would allow for
-  * showing which fields are set in the password preview
-  * showing all passwords at once when scrolling in the corresponding view mode (optional)
-  * displaying flags for set fields in the password table
-* Sorting of the password table by columns
-* Improvements for running `passepartui` in TTY
+* [Ratatui](https://github.com/ratatui/ratatui) for the creation of the TUI
+* [passepartout](https://github.com/kardwen/passepartout), which uses
+  * [gpgme](https://github.com/gpg-rs/gpgme) for decryption of password files with [GnuPG](https://www.gnupg.org/)
+  * [totp-rs](https://github.com/constantoine/totp-rs) for creation of one-time passwords (OTP)

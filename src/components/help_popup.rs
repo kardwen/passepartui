@@ -21,7 +21,7 @@ pub struct HelpPopup<'a> {
     close_button: Button<'a>,
 }
 
-impl<'a> HelpPopup<'a> {
+impl HelpPopup<'_> {
     pub fn new() -> Self {
         let theme = Theme::new();
         HelpPopup {
@@ -36,7 +36,7 @@ impl<'a> HelpPopup<'a> {
     }
 }
 
-impl<'a> Widget for &mut HelpPopup<'a> {
+impl Widget for &mut HelpPopup<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         self.area = Some(area);
         let theme = self.theme;
@@ -98,7 +98,7 @@ impl<'a> Widget for &mut HelpPopup<'a> {
     }
 }
 
-impl<'a> MouseSupport for HelpPopup<'a> {
+impl MouseSupport for HelpPopup<'_> {
     fn handle_mouse_event(&mut self, event: MouseEvent) -> Option<Action> {
         self.close_button
             .handle_mouse_event(event)

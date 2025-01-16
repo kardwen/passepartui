@@ -60,7 +60,7 @@ impl<'a> PasswordTable<'a> {
                         0 => self.theme.table_normal_row,
                         _ => self.theme.table_alt_row,
                     };
-                    let pass_id = info.pass_id();
+                    let pass_id = info.id.clone();
                     let pass_id_parts: Vec<_> = if !pattern.is_empty() {
                         let pass_id_lower = pass_id.to_lowercase();
                         let pattern_lower = pattern.to_lowercase();
@@ -140,7 +140,7 @@ impl<'a> PasswordTable<'a> {
                     0 => theme.table_normal_row,
                     _ => theme.table_alt_row,
                 };
-                Row::new(vec![info.pass_id(), info.last_modified()])
+                Row::new(vec![info.id.clone(), info.last_modified()])
                     .style(Style::new().fg(theme.table_row_fg).bg(color))
             })
             .collect()
@@ -187,7 +187,7 @@ impl<'a> PasswordTable<'a> {
     }
 }
 
-impl<'a> Widget for &mut PasswordTable<'a> {
+impl Widget for &mut PasswordTable<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         self.area = Some(area);
         let theme = self.theme;
@@ -231,7 +231,7 @@ impl<'a> Widget for &mut PasswordTable<'a> {
     }
 }
 
-impl<'a> MouseSupport for PasswordTable<'a> {
+impl MouseSupport for PasswordTable<'_> {
     fn handle_mouse_event(&mut self, event: MouseEvent) -> Option<Action> {
         let position = Position::new(event.column, event.row);
 

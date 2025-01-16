@@ -269,7 +269,7 @@ impl Widget for &mut PasswordDetails<'_> {
     }
 }
 
-impl<'a> MouseSupport for PasswordDetails<'a> {
+impl MouseSupport for PasswordDetails<'_> {
     fn handle_mouse_event(&mut self, event: MouseEvent) -> Option<Action> {
         let fields = [
             &mut self.pass_id_field,

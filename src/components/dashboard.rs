@@ -80,7 +80,7 @@ pub struct Dashboard<'a> {
     event_tx: Sender<PasswordEvent>,
 }
 
-impl<'a> Dashboard<'a> {
+impl Dashboard<'_> {
     pub fn new(tty_pinentry: bool, event_tx: Sender<PasswordEvent>) -> Self {
         let store = PasswordStore::new();
         let password_refs: Vec<&PasswordInfo> = store.passwords.iter().collect();
@@ -146,7 +146,7 @@ impl<'a> Dashboard<'a> {
         match self.get_selected_info() {
             Some(info) => {
                 // Update view with infos for selected entry
-                let pass_id = info.pass_id();
+                let pass_id = info.id.clone();
                 if let Some(selected_pass_id) = &self.password_details.pass_id {
                     if *selected_pass_id == pass_id {
                         return;
@@ -184,7 +184,7 @@ impl<'a> Dashboard<'a> {
             .passwords
             .iter()
             .enumerate()
-            .filter(|(_, p)| p.pass_id.to_lowercase().contains(&pattern.to_lowercase()))
+            .filter(|(_, info)| info.id.to_lowercase().contains(&pattern.to_lowercase()))
             .map(|(index, _)| index)
             .collect();
 
@@ -217,7 +217,7 @@ impl<'a> Dashboard<'a> {
 
     fn update_pass_details(&mut self, pass_id: String, message: String) -> Option<Action> {
         match self.get_selected_info() {
-            Some(info) if pass_id == info.pass_id => (),
+            Some(info) if pass_id == info.id => (),
             _ => return None,
         }
 
@@ -267,13 +267,13 @@ impl<'a> Dashboard<'a> {
     }
 }
 
-impl<'a> Component for Dashboard<'a> {
+impl Component for Dashboard<'_> {
     fn update(&mut self, action: Action) -> Result<Option<Action>> {
         let action = match action {
             Action::Password(action) => match action {
                 PasswordAction::CopyPassId => {
                     if let Some(info) = self.get_selected_info() {
-                        match passepartout::copy_id(info.pass_id.clone()) {
+                        match passepartout::copy_id(info.id.clone()) {
                             Ok(()) => {
                                 let message = "Password file ID copied to clipboard".to_string();
                                 Some(Action::SetStatus(message))
@@ -290,7 +290,7 @@ impl<'a> Component for Dashboard<'a> {
                 }
                 PasswordAction::CopyPassword => {
                     if let Some(info) = self.get_selected_info() {
-                        let pass_id = info.pass_id.clone();
+                        let pass_id = info.id.clone();
                         if let Some(completion_beacon) =
                             self.last_op.allows(&pass_id, "copy_password")
                         {
@@ -316,7 +316,7 @@ impl<'a> Component for Dashboard<'a> {
                                 Some(Action::Redraw)
                             } else {
                                 self.pool.spawn_ok(future);
-                                let status_message = "⧗ (pass) Copying password...".to_string();
+                                let status_message = "⧗ Copying password...".to_string();
                                 Some(Action::SetStatus(status_message))
                             }
                         } else {
@@ -329,7 +329,7 @@ impl<'a> Component for Dashboard<'a> {
                 }
                 PasswordAction::CopyLogin => {
                     if let Some(info) = self.get_selected_info() {
-                        let pass_id = info.pass_id.clone();
+                        let pass_id = info.id.clone();
                         if let Some(completion_beacon) =
                             self.last_op.allows(&pass_id, "copy_password")
                         {
@@ -355,7 +355,7 @@ impl<'a> Component for Dashboard<'a> {
                                 Some(Action::Redraw)
                             } else {
                                 self.pool.spawn_ok(future);
-                                let status_message = "⧗ (pass) Copying login...".to_string();
+                                let status_message = "⧗ Copying login...".to_string();
                                 Some(Action::SetStatus(status_message))
                             }
                         } else {
@@ -368,7 +368,7 @@ impl<'a> Component for Dashboard<'a> {
                 }
                 PasswordAction::CopyOtp => {
                     if let Some(info) = self.get_selected_info() {
-                        let pass_id = info.pass_id.clone();
+                        let pass_id = info.id.clone();
                         if let Some(completion_beacon) =
                             self.last_op.allows(&pass_id, "copy_password")
                         {
@@ -394,8 +394,7 @@ impl<'a> Component for Dashboard<'a> {
                                 Some(Action::Redraw)
                             } else {
                                 self.pool.spawn_ok(future);
-                                let status_message =
-                                    "⧗ (pass) Copying one-time password...".to_string();
+                                let status_message = "⧗ Copying one-time password...".to_string();
                                 Some(Action::SetStatus(status_message))
                             }
                         } else {
@@ -408,7 +407,7 @@ impl<'a> Component for Dashboard<'a> {
                 }
                 PasswordAction::Fetch => {
                     if let Some(info) = self.get_selected_info() {
-                        let pass_id = info.pass_id.clone();
+                        let pass_id = info.id.clone();
                         if let Some(completion_beacon) =
                             self.last_op.allows(&pass_id, "decrypt_password_file")
                         {
@@ -432,8 +431,7 @@ impl<'a> Component for Dashboard<'a> {
                                 Some(Action::Redraw)
                             } else {
                                 self.pool.spawn_ok(future);
-                                let status_message =
-                                    "⧗ (pass) Fetching password entry...".to_string();
+                                let status_message = "⧗ Fetching password entry...".to_string();
                                 Some(Action::SetStatus(status_message))
                             }
                         } else {
@@ -446,7 +444,7 @@ impl<'a> Component for Dashboard<'a> {
                 }
                 PasswordAction::FetchOtp => {
                     if let Some(info) = self.get_selected_info() {
-                        let pass_id = info.pass_id.clone();
+                        let pass_id = info.id.clone();
                         if let Some(completion_beacon) =
                             self.last_op.allows(&pass_id, "copy_password")
                         {
@@ -467,8 +465,7 @@ impl<'a> Component for Dashboard<'a> {
                                 Some(Action::Redraw)
                             } else {
                                 self.pool.spawn_ok(future);
-                                let status_message =
-                                    "⧗ (pass) Fetching one-time password...".to_string();
+                                let status_message = "⧗ Fetching one-time password...".to_string();
                                 Some(Action::SetStatus(status_message))
                             }
                         } else {
@@ -698,7 +695,7 @@ impl<'a> Component for Dashboard<'a> {
             Action::DisplayOneTimePassword { pass_id, otp } => {
                 self.status_bar.reset_status();
                 match self.get_selected_info() {
-                    Some(info) if pass_id == info.pass_id => {
+                    Some(info) if pass_id == info.id => {
                         self.password_details.one_time_password = Some(otp);
                         None
                     }
@@ -711,7 +708,7 @@ impl<'a> Component for Dashboard<'a> {
     }
 }
 
-impl<'a> Widget for &mut Dashboard<'a> {
+impl Widget for &mut Dashboard<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         self.area = Some(area);
 
@@ -783,7 +780,7 @@ impl<'a> Widget for &mut Dashboard<'a> {
     }
 }
 
-impl<'a> MouseSupport for Dashboard<'a> {
+impl MouseSupport for Dashboard<'_> {
     fn handle_mouse_event(&mut self, event: MouseEvent) -> Option<Action> {
         // TODO: Currently this only returns the latest action
         // if components overlap, place them last

@@ -71,7 +71,7 @@ impl<'a> DetailsField<'a> {
     }
 }
 
-impl<'a> Widget for &mut DetailsField<'a> {
+impl Widget for &mut DetailsField<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         self.area = Some(area);
         if area.height < 2 {
@@ -119,7 +119,7 @@ impl<'a> Widget for &mut DetailsField<'a> {
     }
 }
 
-impl<'a> MouseSupport for DetailsField<'a> {
+impl MouseSupport for DetailsField<'_> {
     fn handle_mouse_event(&mut self, event: MouseEvent) -> Option<Action> {
         let position = Position::new(event.column, event.row);
         match self.get_area() {
