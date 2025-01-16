@@ -69,6 +69,16 @@ brew tap kardwen/passepartui
 brew install passepartui
 ```
 
+### Installation from Gentoo overlay
+
+An [ebuild](https://gpo.zugaina.org/app-admin/passepartui) for installing `passepartui` is available via `lamdness` overlay:
+
+```sh
+eselect repository enable lamdness
+emaint -r lamdness sync
+emerge -av app-admin/passepartui
+```
+
 ### Manual installation
 
 Clone the repository and change to the directory:
