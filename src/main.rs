@@ -1,7 +1,7 @@
 use anyhow::Result;
 use ratatui::crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
-    execute,
+    execute, terminal::SetTitle,
 };
 use std::{env, io::stdout};
 
@@ -17,6 +17,7 @@ fn main() -> Result<()> {
     let tty_pinentry = env::args().any(|arg| arg == "--tty-pinentry");
 
     let mut terminal = ratatui::init();
+    execute!(stdout(), SetTitle("passepartui"))?;
     execute!(stdout(), EnableMouseCapture)?;
     terminal.clear()?;
     let result = App::new(tty_pinentry).run(&mut terminal);
