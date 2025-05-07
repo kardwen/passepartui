@@ -92,7 +92,7 @@ impl Dashboard<'_> {
             .pool_size(2)
             .create()
             .expect("this should work");
-        let mut dashboard = Self {
+        let dashboard = Self {
             tty_pinentry,
             area: None,
             password_table: PasswordTable::new(&password_refs),
@@ -110,8 +110,12 @@ impl Dashboard<'_> {
             last_op: LastOperation::default(),
             event_tx,
         };
-        dashboard.select_entry(0);
-        dashboard
+        dashboard.init()
+    }
+
+    fn init(mut self) -> Self {
+        self.select_entry(0);
+        self
     }
 
     pub fn next(&mut self, step: usize) {
